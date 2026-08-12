@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TokenGacha · LLM API 中转站</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+  <canvas id="fx"></canvas>
+
+  <header>
+    <div class="logo"><span class="mark">🎰</span>TokenGacha<small>LLM API 中转站</small></div>
+    <nav class="top-nav">
+      <button data-page="buy">购买Token</button>
+      <button data-page="work">工作</button>
+      <button data-page="balance">余额</button>
+    </nav>
+    <div class="stat-chips">
+      <div class="chip money">余额 <b id="h-money">¥0</b></div>
+      <div class="chip">⚡ <b id="h-tokens">0</b></div>
+      <div class="chip hide-m">抽卡 <b id="h-pulls">0</b></div>
+    </div>
+    <button class="hbtn" id="btn-rates">📊<span class="lbl"> 概率公示</span></button>
+    <button class="hbtn" id="btn-dex">📖<span class="lbl"> 图鉴</span></button>
+    <button class="hbtn" id="btn-help">❓<span class="lbl"> 玩法</span></button>
+  </header>
+
+  <main>
+    <!-- ============ 页面1: 购买Token ============ -->
+    <div class="page" id="page-buy">
+      <div class="page-head">
+        <h2>购买 Token</h2>
+        <p>盲盒计费 · 抽到顶级模型还是电子垃圾全看命 · 明码标价 · 概不退换</p>
+      </div>
+      <div class="notice"><span class="dot"></span><span id="notice-text">📢 公告：本站已上线 Kimi K3 / GPT-5.6 系列渠道；Claude
+          渠道今日波动，出货率概不补偿。</span></div>
+      <div class="pool-cards" id="pool-cards"></div>
+      <div class="buy-hint">💡 当前持有 <b id="buy-tokens">0 tokens</b>（约 <b id="buy-tasks">0</b> 单工作量）<button class="go"
+          id="go-work">去「工作」变现 →</button></div>
+    </div>
+
+    <!-- ============ 页面2: 工作 ============ -->
+    <div class="page" id="page-work">
+      <div class="page-head">
+        <h2>工作</h2>
+        <p>vibe coding 接单 · 系统自动按稀有度从高到低消耗 token · 每单 200K tokens</p>
+      </div>
+      <div class="work-grid">
+        <div class="work-side">
+          <div class="stat-row">
+            <div class="stat-card cyan">
+              <div class="lb">⚡ 剩余 Token</div>
+              <div class="vl" id="w-tokens">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="lb">📦 可接单量</div>
+              <div class="vl" id="w-tasks">0 <small>单</small></div>
+            </div>
+            <div class="stat-card green">
+              <div class="lb">💹 预计可赚</div>
+              <div class="vl" id="w-est">¥0</div>
+            </div>
+          </div>
+          <div class="panel panel-pad">
+            <div class="panel-title">📊 Token 构成<span class="right">消耗顺序 UR → N</span></div>
+            <div class="rarity-rows" id="rarity-rows"></div>
+          </div>
+        </div>
+        <div class="work-main">
+          <div class="terminal">
+            <div class="tbar"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i
+                style="background:#27c93f"></i><span id="term-title">agent — 自动调度（稀有度优先）</span></div>
+            <pre id="term-body">> 等待接单…<span class="cursor"></span></pre>
+          </div>
+          <div class="work-actions">
+            <button class="work-btn manual" id="btn-work">开始工作<small id="work-sub"></small></button>
+            <button class="work-btn auto" id="btn-auto">⚡ 自动模式 · 一键梭哈<small id="auto-sub"></small></button>
+          </div>
+        </div>
+      </div>
+      <div class="work-log" id="work-log"></div>
+    </div>
+
+    <!-- ============ 页面3: 余额 ============ -->
+    <div class="page" id="page-balance">
+      <div class="page-head">
+        <h2>余额</h2>
+        <p>钱包 · 收支明细 · 资产持仓</p>
+      </div>
+      <div class="apikey">🔑 API 令牌：<span>sk-tokengacha-••••••••••••••••3f9a</span><button class="cp"
+          id="btn-copy-key">复制</button></div>
+      <div class="bal-hero">
+        <div class="big">
+          <div class="lb">账户余额 <span id="b-cheat"></span></div>
+          <div class="vl" id="b-money">¥0</div>
+        </div>
+        <div class="sub-stats">
+          <div class="cell">
+            <div class="lb">累计收入</div>
+            <div class="vl" style="color:var(--green)" id="b-earn">¥0</div>
+          </div>
+          <div class="cell">
+            <div class="lb">累计氪金</div>
+            <div class="vl" style="color:var(--red)" id="b-spent">¥0</div>
+          </div>
+          <div class="cell">
+            <div class="lb">Token 估值</div>
+            <div class="vl" style="color:var(--cyan)" id="b-tokval">¥0</div>
+          </div>
+        </div>
+        <button class="hbtn" id="btn-topup"
+          style="background:#fffbeb;border-color:#fde68a;color:#92600a;font-weight:800">💳<span class="lbl">
+            充值</span></button>
+        <button class="hbtn" id="btn-share">📣<span class="lbl"> 分享战绩</span></button>
+        <div class="free-progress">
+          <div class="lb"><span>🏆 财富自由进度</span><span id="b-free-txt"></span></div>
+          <div class="bar"><i id="b-free-bar"></i></div>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="panel panel-pad">
+          <div class="panel-title">🧾 收支明细<span class="right">最近 80 条</span></div>
+          <div class="ledger-list" id="ledger-list"></div>
+        </div>
+        <div class="panel panel-pad">
+          <div class="panel-title">📈 战绩统计</div>
+          <div class="stat-grid" id="stat-grid"></div>
+          <div class="panel-title" style="margin-top:14px">📡 渠道状态<span class="right">实时监控（并不）</span></div>
+          <div class="channels" id="channels"></div>
+        </div>
+      </div>
+      <div class="panel panel-pad">
+        <div class="panel-title">🗃️ 我的模型卡<span class="right" id="inv-total"></span></div>
+        <div class="inv-grid" id="inv-grid"></div>
+      </div>
+    </div>
+  </main>
+
+  <footer>TokenGacha 中转站 · 本站为抽卡模拟器，与任何真实中转站无关<br>模型与智能指数参考 <a href="https://artificialanalysis.ai/leaderboards/models"
+      target="_blank">Artificial Analysis</a> · 图标来自 <a href="https://lobehub.com/icons"
+      target="_blank">@lobehub/icons</a></footer>
+
+  <!-- 抽卡动画层 -->
+  <div id="overlay">
+    <button id="skip-btn">跳过 ▶▶</button>
+    <h2 id="overlay-title">✨ 抽卡结果 ✨</h2>
+    <div class="gacha-row" id="gacha-row"></div>
+    <div class="gacha-summary" id="gacha-summary"></div>
+    <button id="close-overlay">收入卡库</button>
+  </div>
+
+  <!-- 弹窗 -->
+  <div class="modal-mask" id="modal-mask">
+    <div class="modal" id="modal-box"></div>
+  </div>
+
+  <!-- 按序加载: data → core → game → ui → app (Phase 0 模块化拆分) -->
+  <script src="js/data/models.js"></script>
+  <script src="js/data/gacha.js"></script>
+  <script src="js/data/texts.js"></script>
+  <script src="js/core/util.js"></script>
+  <script src="js/core/audio.js"></script>
+  <script src="js/core/fx.js"></script>
+  <script src="js/core/state.js"></script>
+  <script src="js/core/loop.js"></script>
+  <script src="js/game/gacha.js"></script>
+  <script src="js/game/work.js"></script>
+  <script src="js/ui/router.js"></script>
+  <script src="js/ui/pages.js"></script>
+  <script src="js/ui/modals.js"></script>
+  <script src="js/ui/share.js"></script>
+  <script src="js/app.js"></script>
+</body>
+
+</html>
