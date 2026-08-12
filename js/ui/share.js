@@ -7,8 +7,12 @@
 let shareCtx = { cv: null, ms: null };
 function shareText(ms) {
   const best = S.stats.best ? MMAP[S.stats.best].name : '无';
-  if (ms) return `【${ms.title} ${ms.tag}】我在 TokenGacha 抽卡模拟器达成新成就！抽卡 ${S.stats.pulls} 次、打工 ${S.stats.tasks} 单，现在余额 ${fmt(S.money)}。70% 的玩家最终破产，你能成为持续赚钱的那 30% 吗？👉 ${SITE_URL}`;
-  return `我在 TokenGacha 抽卡模拟器鏖战至今：余额 ${fmt(S.money)}，抽卡 ${S.stats.pulls} 次，最佳出货 ${best}，删库 ${S.stats.disasters} 次🤡。70% 的玩家最终破产，你能成为那 30% 吗？👉 ${SITE_URL}`;
+  const stageTxt = `阶段${S.stage}/5`;
+  if (S.flags.agi) {
+    return `🧠 我亲手研发出了 AGI！TokenGacha 五阶段通关：阶段 ${S.stage}/5，技术 ${S.techs.length}/9，累计赚取 ${fmt(S.stats.earn)}，最佳模型 ${best}，删库 ${S.stats.disasters} 次🤡。你也能做到吗？👉 ${SITE_URL}`;
+  }
+  if (ms) return `【${ms.title} ${ms.tag}】我在 TokenGacha 达成新成就（${stageTxt}）！抽卡 ${S.stats.pulls} 次、工作 ${S.stats.tasks} 单、自产 ${fmtK(S.stats.selfTokens)} tokens，现在余额 ${fmt(S.money)}。从手写代码到 AGI，你能走多远？👉 ${SITE_URL}`;
+  return `我在 TokenGacha 从手写代码打到 ${stageTxt}：余额 ${fmt(S.money)}，抽卡 ${S.stats.pulls} 次，最佳出货 ${best}，删库 ${S.stats.disasters} 次🤡，自产 ${fmtK(S.stats.selfTokens)} tokens。距离 AGI 还差 AI 占比 ${Math.round(S.aiRatio * 100)}%。👉 ${SITE_URL}`;
 }
 function roundRectPath(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
 function drawShareCard(ms) {
@@ -31,7 +35,8 @@ function drawShareCard(ms) {
   g.fillText('¥' + Math.round(S.money).toLocaleString('zh-CN'), W / 2, ms ? 300 : 288);
   g.font = '500 18px ' + F; g.fillStyle = '#98a2c8'; g.fillText('账户余额', W / 2, ms ? 330 : 318);
   const best = S.stats.best ? MMAP[S.stats.best].name : '—';
-  const cells = [['抽卡次数', S.stats.pulls], ['工作单数', S.stats.tasks], ['删库事故', S.stats.disasters], ['最佳出货', best]];
+  const cells = [['阶段', `S${S.stage}/5`], ['抽卡次数', S.stats.pulls], ['工作单数', S.stats.tasks], ['删库事故', S.stats.disasters]];
+  if (S.stage >= 4) cells[0] = ['AI 占比', Math.round(S.aiRatio * 100) + '%'];
   const cw = 180, gap = 16, x0 = (W - (cw * 4 + gap * 3)) / 2, y0 = 352;
   cells.forEach(([l, v], i) => {
     const x = x0 + i * (cw + gap);
@@ -41,7 +46,7 @@ function drawShareCard(ms) {
     g.font = '800 21px ' + F; g.fillStyle = '#1c2340'; g.fillText(String(v), x + cw / 2, y0 + 62);
   });
   g.font = '700 20px ' + F; g.fillStyle = '#2f6bff';
-  g.fillText('70% 玩家最终破产，你能成为那 30% 吗？👉 tokengacha.metagaruta.com', W / 2, 478);
+  g.fillText(S.flags.agi ? '我已达成 AGI，你敢挑战吗？👉 tokengacha.metagaruta.com' : '从手写代码到 AGI，你能走多远？👉 tokengacha.metagaruta.com', W / 2, 478);
   return cv;
 }
 function shareHTML(ms) {

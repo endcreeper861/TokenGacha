@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:,">
   <title>TokenGacha · LLM API 中转站</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -14,14 +15,20 @@
   <header>
     <div class="logo"><span class="mark">🎰</span>TokenGacha<small>LLM API 中转站</small></div>
     <nav class="top-nav">
-      <button data-page="buy">购买Token</button>
-      <button data-page="work">工作</button>
-      <button data-page="balance">余额</button>
+      <button data-page="dashboard">仪表盘</button>
+      <button data-page="market">市场</button>
+      <button data-page="work">工作台</button>
+      <button data-page="gpu">机房</button>
+      <button data-page="lab">实验室</button>
+      <button data-page="assets">资产</button>
     </nav>
     <div class="stat-chips">
       <div class="chip money">余额 <b id="h-money">¥0</b></div>
       <div class="chip">⚡ <b id="h-tokens">0</b></div>
       <div class="chip hide-m">抽卡 <b id="h-pulls">0</b></div>
+      <div class="chip hide-m" id="chip-vram" style="display:none">🖥️ <b id="h-vram">0</b><small>GB</small></div>
+      <div class="chip hide-m" id="chip-flops" style="display:none">⚙️ <b id="h-flops">0</b><small>TFLOPS</small></div>
+      <div class="chip hide-m" id="chip-research" style="display:none">🧠 <b id="h-research">0%</b></div>
     </div>
     <button class="hbtn" id="btn-rates">📊<span class="lbl"> 概率公示</span></button>
     <button class="hbtn" id="btn-dex">📖<span class="lbl"> 图鉴</span></button>
@@ -29,24 +36,59 @@
   </header>
 
   <main>
-    <!-- ============ 页面1: 购买Token ============ -->
-    <div class="page" id="page-buy">
+    <!-- ============ 页面1: 仪表盘 ============ -->
+    <div class="page" id="page-dashboard">
+      <div id="dash-root"></div>
+    </div>
+
+    <!-- ============ 页面2: 市场 (原购买Token) ============ -->
+    <div class="page" id="page-market">
       <div class="page-head">
-        <h2>购买 Token</h2>
-        <p>盲盒计费 · 抽到顶级模型还是电子垃圾全看命 · 明码标价 · 概不退换</p>
+        <h2>市场 · 购买 Token</h2>
+        <p>官方 API 直购 / 盲盒计费 / 明码标价 · 概不退换</p>
       </div>
       <div class="notice"><span class="dot"></span><span id="notice-text">📢 公告：本站已上线 Kimi K3 / GPT-5.6 系列渠道；Claude
           渠道今日波动，出货率概不补偿。</span></div>
+      <!-- Phase 3.2: 官方 API 直购 -->
+      <div class="panel panel-pad" id="api-panel">
+        <div class="panel-title">🏛️ 官方 API 直购<span class="right">品质 95% · 明码标价 · 赚得稳</span></div>
+        <div class="api-grid" id="api-grid"></div>
+      </div>
       <div class="pool-cards" id="pool-cards"></div>
       <div class="buy-hint">💡 当前持有 <b id="buy-tokens">0 tokens</b>（约 <b id="buy-tasks">0</b> 单工作量）<button class="go"
-          id="go-work">去「工作」变现 →</button></div>
+          id="go-work">去「工作台」变现 →</button></div>
+      <!-- Phase 3.2: Token 卖出 -->
+      <div class="panel panel-pad" id="sell-panel">
+        <div class="panel-title">💱 Token 卖出<span class="right">自产 token 品质 100% · 官方价 ×0.6</span></div>
+        <div class="market-evt" id="market-evt"></div>
+        <div class="sell-box">
+          <div class="sell-txt">可卖出 <b id="sell-amount">0</b> tokens<span class="sell-note" id="sell-note"></span></div>
+          <button class="work-btn manual sell-btn" id="btn-sell">💰 卖出全部可卖 token</button>
+        </div>
+        <div class="market-manip" id="market-manip"></div>
+      </div>
+      <div class="locked-overlay" id="market-lock"></div>
     </div>
 
     <!-- ============ 页面2: 工作 ============ -->
     <div class="page" id="page-work">
       <div class="page-head">
         <h2>工作</h2>
-        <p>vibe coding 接单 · 系统自动按稀有度从高到低消耗 token · 每单 200K tokens</p>
+        <p>阶段一：手写代码攒第一桶金 · 阶段二：AI 模型接单</p>
+      </div>
+      <!-- 点击器面板（阶段一主面板，阶段二后收缩为次要面板） -->
+      <div class="clicker-wrap panel" id="clicker-panel">
+        <div class="clicker-head">
+          <div class="clicker-title">🔨 手写代码接单<span class="clicker-sub" id="clicker-sub"></span></div>
+          <div class="clicker-stats">
+            <span class="ck">💰 每单 <b id="clicker-pay">¥3~6</b></span>
+            <span class="ck">⚡ 效率 <b id="clicker-eff">×1</b></span>
+            <span class="ck">🎯 进度 <b id="clicker-target">100%</b></span>
+          </div>
+        </div>
+        <button class="clicker-btn" id="btn-click">💻 写代码</button>
+        <div class="clicker-bar"><i id="clicker-bar"></i><span id="clicker-pct">0%</span></div>
+        <div class="upgrade-grid" id="s1-upgrades"></div>
       </div>
       <div class="work-grid">
         <div class="work-side">
@@ -68,6 +110,19 @@
             <div class="panel-title">📊 Token 构成<span class="right">消耗顺序 UR → N</span></div>
             <div class="rarity-rows" id="rarity-rows"></div>
           </div>
+          <!-- Phase 3.3: 档位选择 -->
+          <div class="panel panel-pad">
+            <div class="panel-title">🎚️ 工作档位<span class="right">档位越大越赚，风险越高</span></div>
+            <div class="tier-select" id="tier-select"></div>
+            <div class="auto-toggle-wrap" id="auto-toggle-wrap">
+              <button class="work-btn auto auto-toggle" id="btn-auto-toggle">🤖 自动化调度<small>每秒 5 单 · 无动画</small></button>
+            </div>
+          </div>
+          <!-- Phase 3.4: S2 升级 -->
+          <div class="panel panel-pad">
+            <div class="panel-title">🧰 工具链升级<span class="right">阶段二</span></div>
+            <div class="upgrade-grid" id="s2-upgrades"></div>
+          </div>
         </div>
         <div class="work-main">
           <div class="terminal">
@@ -84,10 +139,10 @@
       <div class="work-log" id="work-log"></div>
     </div>
 
-    <!-- ============ 页面3: 余额 ============ -->
-    <div class="page" id="page-balance">
+    <!-- ============ 页面4: 资产 (原余额) ============ -->
+    <div class="page" id="page-assets">
       <div class="page-head">
-        <h2>余额</h2>
+        <h2>资产</h2>
         <p>钱包 · 收支明细 · 资产持仓</p>
       </div>
       <div class="apikey">🔑 API 令牌：<span>sk-tokengacha-••••••••••••••••3f9a</span><button class="cp"
@@ -136,6 +191,27 @@
         <div class="panel-title">🗃️ 我的模型卡<span class="right" id="inv-total"></span></div>
         <div class="inv-grid" id="inv-grid"></div>
       </div>
+      <div class="locked-overlay" id="assets-lock"></div>
+    </div>
+
+    <!-- ============ 页面5: 机房 (阶段三) ============ -->
+    <div class="page" id="page-gpu">
+      <div class="page-head">
+        <h2>GPU 机房</h2>
+        <p>购入显卡 · 部署模型 · 自动产出纯净 token</p>
+      </div>
+      <div class="gpu-root" id="gpu-root"></div>
+      <div class="locked-overlay" id="gpu-lock"></div>
+    </div>
+
+    <!-- ============ 页面6: 实验室 (阶段四) ============ -->
+    <div class="page" id="page-lab">
+      <div class="page-head">
+        <h2>实验室</h2>
+        <p>雇佣研究员 · 推进研究 · 研发超级模型</p>
+      </div>
+      <div class="lab-root" id="lab-root"></div>
+      <div class="locked-overlay" id="lab-lock"></div>
     </div>
   </main>
 
@@ -161,15 +237,25 @@
   <script src="js/data/models.js"></script>
   <script src="js/data/gacha.js"></script>
   <script src="js/data/texts.js"></script>
+  <script src="js/data/upgrades.js"></script>
+  <script src="js/data/gpus.js"></script>
+  <script src="js/data/techs.js"></script>
   <script src="js/core/util.js"></script>
   <script src="js/core/audio.js"></script>
   <script src="js/core/fx.js"></script>
   <script src="js/core/state.js"></script>
   <script src="js/core/loop.js"></script>
   <script src="js/game/gacha.js"></script>
+  <script src="js/game/market.js"></script>
+  <script src="js/game/gpu.js"></script>
+  <script src="js/game/research.js"></script>
+  <script src="js/game/tech.js"></script>
   <script src="js/game/work.js"></script>
+  <script src="js/game/clicker.js"></script>
+  <script src="js/game/stage.js"></script>
   <script src="js/ui/router.js"></script>
   <script src="js/ui/pages.js"></script>
+  <script src="js/ui/dashboard.js"></script>
   <script src="js/ui/modals.js"></script>
   <script src="js/ui/share.js"></script>
   <script src="js/app.js"></script>

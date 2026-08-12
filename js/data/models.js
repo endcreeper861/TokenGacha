@@ -48,3 +48,9 @@ const MODELS = [
 ];
 const MMAP = Object.fromEntries(MODELS.map(m => [m.id, m]));
 
+/* ---------- Phase 4.1: 模型显存占用 & 自产速率系数 ---------- */
+// 模型显存占用（GB/实例）
+const VRAM_COST = { N: 2, R: 4, SR: 8, SSR: 16, UR: 24, EX: 32 };
+// 自产速率系数：tok/s per TFLOPS（小模型产出快单价低，大模型产出慢单价高）
+const SELF_RATE = { N: 400, R: 250, SR: 120, SSR: 50, UR: 20, EX: 10 }; // EX: 超级模型 AGI-X（重但贵）
+

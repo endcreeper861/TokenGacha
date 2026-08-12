@@ -3,7 +3,7 @@
    TokenGacha · js/ui/modals.js — 弹窗体系与结局检测
    ================================================================ */
 
-/* ---------- 结局检测 ---------- */
+/* ---------- 结局检测 (Phase 3.5: 删破产, 里程碑保留) ---------- */
 function checkEnd() {
   if (!S.flags.cheated) for (const ms of MILESTONES) {
     if (S.money >= ms.at && !S.flags.ms[ms.id]) {
@@ -13,12 +13,6 @@ function checkEnd() {
       setTimeout(() => showModal(milestoneHTML(ms)), 400);
       return;
     }
-  }
-  // 破产: token 全部耗尽 且 余额不足以最便宜单抽
-  const minCost = Math.min(...Object.values(POOLS).map(p => p.price));
-  if (S.money < minCost && totalTasks() <= 0 && S.freeTen <= 0 && !pulling && !working) {
-    SFX.bad();
-    showModal(bankruptHTML(), true);
   }
 }
 
@@ -71,20 +65,27 @@ function ratesHTML() {
   · 稀有度按 <a href="https://artificialanalysis.ai/leaderboards/models" target="_blank">Artificial Analysis 智能指数 v4.1</a> 分档：UR≥55 / SSR 47-54 / SR 40-46 / R 28-39 / N&lt;28<br>
   · 每池 ${PITY_MAX} 抽无 SSR+ 触发保底（80% SSR / 20% UR）；十连必出 SR 及以上<br>
   · 新手池为「体验卡」，token 额度 ×50%<br>
-  · 工作收入 = 模型报价 × 事件倍率（大成功×2.5 / 返工×0.4 / 删库赔¥65，垃圾模型事故率高）<br>
-  · 本中转站期望约 7 成玩家最终破产。庄家永远赢，除非……你抽到那张卡。</div>`;
+  · <b>Token 品质分布</b>：盲盒品质 60%~100% 随机（购买前不可见，可花 ¥${QUALITY.inspectFee}/张检测揭示）；官方 API 品质 95%；机房产出自产品质 100%。品质越高大成功越多、返工/删库越少（返工率上限 ${Math.round(QUALITY.reworkCap * 100)}%、删库率上限 ${Math.round(QUALITY.disasterCap * 100)}%）<br>
+  · 工作收入 = 模型报价 × 档位倍率 × 事件倍率（大成功×2.5 / 返工=0 / 删库赔档位罚金）；品质影响四态概率<br>
+  · 删库最多扣到 ¥0（不会破产，点击器永远保底）。</div>`;
 }
 function dexHTML() {
   const counts = {};
   for (const r of RORDER) counts[r] = MODELS.filter(m => m.r === r).length;
+  // Phase 5.4: 超级模型 AGI-X 附加（EX 稀有度）
+  const exList = MMAP.agix ? [MMAP.agix] : [];
+  const totalModels = MODELS.length + exList.length;
   const got = Object.keys(S.dex).length;
-  const html = `<h3>📖 模型图鉴 ${got}/${MODELS.length}<button class="x" onclick="closeModal()">×</button></h3>
-  <div class="dex-legend">${RORDER.map(r => `<span style="color:${RARITY[r].hex}">■</span> ${r} ${RARITY[r].label} ×${counts[r]}`).join('　')}</div>
+  const html = `<h3>📖 模型图鉴 ${got}/${totalModels}<button class="x" onclick="closeModal()">×</button></h3>
+  <div class="dex-legend">${RORDER.map(r => `<span style="color:${RARITY[r].hex}">■</span> ${r} ${RARITY[r].label} ×${counts[r]}`).join('　')}${MMAP.agix ? `<span style="color:${RARITY.EX.hex}">■</span> EX ${RARITY.EX.label} ×1` : ''}</div>
   <div class="dex-grid" id="dex-grid"></div>
   <div class="note" style="margin-top:10px">收录 OpenAI / Anthropic / Google / xAI / DeepSeek / Moonshot / 智谱 / 阿里 / Meta / Mistral / NVIDIA / Amazon / 小米 / MiniMax / 字节 / 百度 / 腾讯 / 讯飞 等 18 家厂商。排名参考 Artificial Analysis 智能指数 v4.1。</div>`;
   showModal(html);
   const grid = $('dex-grid');
-  const sorted = [...MODELS].sort((a, b) => RORDER.indexOf(b.r) - RORDER.indexOf(a.r) || b.idx - a.idx);
+  const sorted = [...MODELS, ...exList].sort((a, b) => {
+    const ri = r => r === 'EX' ? RORDER.length : RORDER.indexOf(r);
+    return ri(b.r) - ri(a.r) || b.idx - a.idx;
+  });
   grid.innerHTML = sorted.map(m => {
     const owned = S.dex[m.id] > 0;
     return `<div class="dex-cell ${owned ? '' : 'locked'}" style="--rc:${RARITY[m.r].hex}" title="${m.name} · ${m.vendor}&#10;${m.quote}">
@@ -96,10 +97,13 @@ function dexHTML() {
 }
 function helpHTML() {
   return `<h3>❓ 玩法说明<button class="x" onclick="closeModal()">×</button></h3>
-  <p>你是一名独立开发者。这家中转站不卖套餐，只卖<b>盲盒</b>：抽到顶级模型还是电子垃圾，全看命。</p>
-  <p>🔁 循环：<b>「购买Token」抽卡 → 「工作」用 token 接 vibe coding 私活 → 「余额」看着数字涨跌</b>。系统自动优先消耗最高稀有度的卡——好钢用在刀刃上。模型越强报价越高、翻车越少；垃圾模型还可能把客户数据库删了<b>倒赔钱</b>。</p>
-  <p>⚡ 「开始工作」一键完成 ${BATCH_TASKS} 单；「自动模式」直接梭哈全部 token。资金回笼后立刻去抽下一波。</p>
-  <p>💡 攻略：青铜池是新手陷阱（额度减半）；<b>白银池是本站良心，期望回本率最高</b>，主力抽它；王者池不出垃圾但 UR 仅 5%——欧皇的天堂，赌狗的坟场。余额 ≥ ${fmt(VICTORY_AT)} 即达成「财富自由」。</p>
+  <p>你是独立开发者，从<b>手写代码</b>白手起家，一路升级到研发自己的 AGI。五个阶段<b>并行叠加</b>：每个新阶段在旧阶段基础上增加新收入来源。</p>
+  <p>🔨 <b>阶段一 · 手写代码</b>：工作台狂点「写代码」按钮攒第一桶金（¥500）→ 市场开放。</p>
+  <p>🤖 <b>阶段二 · AI 接单</b>：市场买 token（官方 API 稳赚 / 盲盒赌运气，品质 60%~100% 可花 ¥20 检测）→ 工作台接单变现。攒到 ¥5,000 买第一张显卡。</p>
+  <p>🖥️ <b>阶段三 · GPU 机房</b>：显卡部署已解锁模型自动产纯净 token（品质 100%）→ 自用或卖出。攒到 ¥50,000 雇第一个研究员。</p>
+  <p>🔬 <b>阶段四 · 模型研发</b>：雇研究员（工资月薪/600 秒扣）推进研究 → 100% 研发出超级模型 AGI-X。</p>
+  <p>🧠 <b>阶段五 · AGI 之路</b>：实验室解锁 9 项技术（金钱+前置），AI 占比从 5% 到 100% → <b>AGI 通关</b>，解锁沙盒模式。</p>
+  <p>💡 攻略：白银盲盒是主力卡池；工作档位越大越赚风险越高；机房产出 token 自用比卖出更划算；删库最多扣到 ¥0 不会破产（点击器永远保底）。</p>
   <p>⌨️ 快捷键：<span class="kbd">空格</span> 批量接单</p>
   <button class="big-btn ghost" id="btn-reset">🗑️ 清空存档，重新来过</button>`;
 }
@@ -107,12 +111,6 @@ function endStats() {
   const best = S.stats.best ? MMAP[S.stats.best] : null;
   const rows = [['总抽数', S.stats.pulls], ['工作单数', S.stats.tasks], ['累计收入', fmt(S.stats.earn)], ['累计氪金', fmt(S.stats.spent)], ['大成功', S.stats.greats], ['删库事故', S.stats.disasters], ['最佳出货', best ? best.name : '无']];
   return `<div class="end-stats">${rows.map(([l, v]) => `<div class="cell"><div class="lb">${l}</div><b>${v}</b></div>`).join('')}</div>`;
-}
-function bankruptHTML() {
-  return `<div class="end-title">💀 破产了</div>
-  <div class="end-sub">盲盒误我，垃圾模型毁我青春。<br>你与那 70% 的玩家殊途同归。</div>
-  ${endStats()}
-  <button class="big-btn danger" id="btn-rebirth">🔄 东山再起（重新开局 ${fmt(START_MONEY)} + 免费十连）</button>`;
 }
 function milestoneHTML(ms) {
   return `<div class="end-title">${ms.title}</div>
@@ -123,9 +121,9 @@ function milestoneHTML(ms) {
 }
 function welcomeHTML() {
   return `<h3>🎰 欢迎来到 TokenGacha</h3>
-  <p>这是一家神秘的 <b>LLM API 中转站</b>。它不按量计费，只卖<b>盲盒</b>——</p>
-  <p>你可能抽到 <b>Claude Opus 5</b>（智能指数 61，接一单顶别人十单），也可能抽到<b>豆包</b>（「垃圾。」——某玩家的个人想法）。</p>
-  <p>💰 启动资金 <b>${fmt(START_MONEY)}</b> 已到账，另赠<b>白银盲盒免费十连 ×1</b>。<br>三个页面完成整个循环：<b>购买Token → 工作 → 余额</b>。是破产收场还是财富自由，看你的命了。</p>
-  <button class="big-btn" id="btn-start">🎁 收下启动资金，开抽！</button>`;
+  <p>你是独立开发者，身上一分钱没有，只有一台能写代码的电脑。</p>
+  <p>🔨 去<b>工作台</b>狂点「写代码」按钮接私活——攒够 <b>¥500</b> 后市场会开放，买第一个模型 token 进入 AI 接单时代。</p>
+  <p>目标：从手写代码一路升级到研发自己的 <b>AGI</b>。五个阶段并行叠加，越后期收入来源越多。</p>
+  <button class="big-btn" id="btn-start">💻 开始写代码！</button>`;
 }
 

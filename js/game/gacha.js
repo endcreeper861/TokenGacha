@@ -15,14 +15,18 @@ function makeCard(poolKey, rarity) {
   const cands = MODELS.filter(m => m.r === rarity);
   const m = cands[Math.floor(Math.random() * cands.length)];
   const quota = POOLS[poolKey].half ? Math.round(RARITY[rarity].quota / 2) : RARITY[rarity].quota;
-  return { uid: S.uid++, m: m.id, tokens: quota, max: quota, half: POOLS[poolKey].half };
+  // Phase 3.1: 盲盒品质 60%~100% 随机，默认隐藏，可花检测费揭示
+  const q = +(QUALITY.min + Math.random() * (QUALITY.max - QUALITY.min)).toFixed(2);
+  return { uid: S.uid++, m: m.id, tokens: quota, max: quota, half: POOLS[poolKey].half, q, src: 'gacha', revealed: false };
 }
 // 最佳出货: 先比稀有度, 同档比智能指数
 function maybeBest(c) {
   const m = MMAP[c.m];
   if (!S.stats.best) { S.stats.best = c.m; return; }
   const b = MMAP[S.stats.best];
-  const d = RORDER.indexOf(m.r) - RORDER.indexOf(b.r);
+  // EX 稀有度（超级模型）最高优先
+  const ri = r => r === 'EX' ? RORDER.length : RORDER.indexOf(r);
+  const d = ri(m.r) - ri(b.r);
   if (d > 0 || (d === 0 && m.idx > b.idx)) S.stats.best = c.m;
 }
 function doPulls(poolKey, count) {
@@ -66,6 +70,22 @@ function tryPull(poolKey, count) {
   const cards = doPulls(poolKey, count);
   save(); renderAll();
   showGacha(cards, p);
+}
+
+// Phase 3.1: 花检测费揭示一张卡的品质
+function revealCard(uid) {
+  const c = S.inv.find(x => x.uid === uid);
+  if (!c) return;
+  if (c.revealed) { toast('这张卡已揭示过品质'); return; }
+  if (S.money < QUALITY.inspectFee) { toast('💸 检测费不足！'); SFX.bad(); return; }
+  S.money -= QUALITY.inspectFee;
+  S.stats.spent += QUALITY.inspectFee;
+  c.revealed = true;
+  addLedger(`🔬 品质检测 · ${MMAP[c.m].name}`, -QUALITY.inspectFee);
+  save();
+  renderAll();
+  SFX.flip(0);
+  toast(`🔬 检测完成：品质 <b>${Math.round(c.q * 100)}%</b>！`);
 }
 function showGacha(cards, pool) {
   pulling = true;
