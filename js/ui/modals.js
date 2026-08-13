@@ -41,6 +41,7 @@ function doTopup() {
   const amt = Math.round(v);
   const fromRect = { left: innerWidth / 2 - 60, top: innerHeight / 2 - 40, width: 120, height: 80 };
   S.money += amt;
+  S.peakMoney = Math.max(S.peakMoney, S.money); // 作弊充值同样计入历史峰值（可推进阶段）
   S.flags.cheated = true;
   addLedger('💳 充值（作弊模式）', amt);
   save(); closeModal(); renderAll();

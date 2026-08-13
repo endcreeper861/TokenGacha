@@ -16,7 +16,6 @@ function renderBuy() {
     card.className = 'pool-card' + (p.rec ? ' rec' : '');
     card.style.setProperty('--pc', p.color);
     const pity = S.pity[k];
-    const useFree = k === 'standard' && S.freeTen > 0;
     const seg = RORDER.map(r => p.rates[r] ? `<i style="width:${p.rates[r] * 100}%;background:${RARITY[r].hex}" title="${r} ${(p.rates[r] * 100).toFixed(1)}%"></i>` : '').join('');
     card.innerHTML = `<div class="accent"></div><div class="pool-body">
       <div><div class="pool-name">${p.name}</div><div class="pool-sub">${p.sub}</div></div>
@@ -27,7 +26,7 @@ function renderBuy() {
       <div class="pity-row"><span>保底 ${pity}/${PITY_MAX}</span><div class="pity-bar"><i style="width:${pity / PITY_MAX * 100}%"></i></div></div>
       <div class="pool-btns">
         <button class="pull-btn p1" data-pool="${k}" data-n="1" ${S.money < p.price ? 'disabled' : ''}>单抽<small>¥${p.price}</small></button>
-        <button class="pull-btn p10" data-pool="${k}" data-n="10" ${(!useFree && S.money < p.tenPrice) ? 'disabled' : ''}>十连抽<small>${useFree ? '新手赠送 · 免费！' : '¥' + p.tenPrice + ' · 必出SR+'}</small>${useFree ? `<span class="free-tag">免费 ×${S.freeTen}</span>` : ''}</button>
+        <button class="pull-btn p10" data-pool="${k}" data-n="10" ${S.money < p.tenPrice ? 'disabled' : ''}>十连抽<small>¥${p.tenPrice} · 必出SR+</small></button>
       </div>
       <div class="pool-note">${p.note}</div>
     </div>`;
@@ -55,7 +54,7 @@ function renderWork() {
     tierBox.innerHTML = WORK_ORDER.map(key => {
       const t = WORK_TIERS[key];
       const avail = tierAvailable(t);
-      return `<button class="tier-btn ${key === selectedTier() ? 'active' : ''} ${avail ? '' : 'no-avail'}" data-tier="${key}"
+      return `<button class="tier-btn ${key === selTier ? 'active' : ''} ${avail ? '' : 'no-avail'}" data-tier="${key}"
         title="${avail ? '' : '当前 token 不足以接该档'}">
         ${t.name}<small>${fmtK(t.tokens)} tokens/单 · 报酬 ×${t.payMult}</small>
       </button>`;
@@ -265,6 +264,7 @@ function renderGpu() {
       </select>
       <div class="slot-btns">
         <button class="mini-btn" data-gtoggle="${card.uid}" ${card.model ? '' : 'disabled'}>${card.running ? '⏸ 暂停' : '▶️ 启动'}</button>
+        <button class="mini-btn danger" data-gsell="${card.uid}" title="卖出返还购价 60%，释放插槽">🗑️ 卖出</button>
       </div>
     </div>`;
   }
@@ -300,6 +300,7 @@ function renderGpu() {
     </div>`;
   root.querySelectorAll('[data-gbuy]').forEach(b => b.onclick = () => buyGpu(b.dataset.gbuy));
   root.querySelectorAll('[data-gtoggle]').forEach(b => b.onclick = () => toggleGpu(+b.dataset.gtoggle));
+  root.querySelectorAll('[data-gsell]').forEach(b => b.onclick = () => sellGpu(+b.dataset.gsell));
   root.querySelectorAll('.slot-sel').forEach(sel => sel.onchange = () => deployModel(+sel.dataset.card, sel.value || null));
   root.querySelectorAll('[data-up]').forEach(b => b.onclick = () => buyUpgrade(b.dataset.up));
 }
@@ -314,7 +315,7 @@ function researcherCardsHTML() {
       <div class="res-name">${r.name}<span class="res-count">×${n}</span></div>
       <div class="res-desc">${r.desc} · 边际递减 1/√n</div>
       <div class="res-meta">当前贡献：${(r.speed * staffDiminish(Math.max(1, n))).toFixed(1)}× · 月薪 ¥${r.salary.toLocaleString('zh-CN')}</div>
-      <button class="up-btn" data-hire="${k}" ${n > 0 && !affordable ? '' : ''} ${!affordable && n === 0 ? 'disabled' : ''}>👥 雇佣（需余额 ≥ ¥${r.req.toLocaleString('zh-CN')}）</button>
+      <button class="up-btn" data-hire="${k}" ${!affordable ? 'disabled' : ''}>👥 雇佣（需余额 ≥ ¥${r.req.toLocaleString('zh-CN')}）</button>
     </div>`;
   }).join('');
 }

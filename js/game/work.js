@@ -102,6 +102,7 @@ function settleItems(items) {
     const amt = it.res.amt;
     S.money = Math.max(0, S.money + amt);
     if (amt > 0) S.stats.earn += amt;
+    S.peakMoney = Math.max(S.peakMoney, S.money); // 收入同步历史峰值（阶段解锁判定）
     S.stats.tasks++;
     if (it.res.evt === 'disaster') S.stats.disasters++;
     else if (it.res.evt === 'great') S.stats.greats++;

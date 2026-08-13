@@ -61,11 +61,10 @@ let pulling = false;
 function tryPull(poolKey, count) {
   if (pulling) return;
   const p = POOLS[poolKey];
-  const useFree = poolKey === 'standard' && count === 10 && S.freeTen > 0;
   const cost = count === 10 ? p.tenPrice : p.price;
-  if (!useFree && S.money < cost) { toast('💸 余额不足！先去「工作」赚钱'); SFX.bad(); return; }
-  if (useFree) { S.freeTen--; addLedger('新手赠送 · 白银盲盒十连', 0); }
-  else { S.money -= cost; S.stats.spent += cost; addLedger(`购买${p.name} ×${count}`, -cost); }
+  if (S.money < cost) { toast('💸 余额不足！先去「工作」赚钱'); SFX.bad(); return; }
+  S.money -= cost; S.stats.spent += cost;
+  addLedger(`购买${p.name} ×${count}`, -cost);
   SFX.pull();
   const cards = doPulls(poolKey, count);
   save(); renderAll();

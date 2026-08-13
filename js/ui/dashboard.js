@@ -35,6 +35,16 @@ function incomeFlows() {
 }
 
 /* ---------- 渲染仪表盘 ---------- */
+// Phase 4.5: 限时市场事件横幅（仪表盘，倒计时由 market.js tick 每秒刷新）
+function marketEvtBanner() {
+  if (!S.marketEvt) return '';
+  const r = S.marketEvt.rarity;
+  const left = Math.max(0, Math.ceil((S.marketEvt.until - Date.now()) / 1000));
+  return `<div class="banner" style="background:linear-gradient(90deg,#fef3c7,#fde68a);border-color:#f59e0b">
+    <span class="banner-ic">🔥</span>
+    <div class="banner-txt"><b>${RARITY[r].name} token 需求暴涨！</b><div class="banner-tip">卖出价 ×${EVT_BOOST} · 倒计时 <b id="dash-evt-left">${left}s</b> · 快去市场卖自产 token</div></div>
+  </div>`;
+}
 function renderDashboard() {
   const root = $('dash-root');
   const flows = incomeFlows();
@@ -62,7 +72,7 @@ function renderDashboard() {
   ).join('');
 
   root.innerHTML = `
-    <div class="banner-zone" id="dash-banners">${bannerHTML()}</div>
+    <div class="banner-zone" id="dash-banners">${marketEvtBanner()}${bannerHTML()}</div>
     ${agiBarHTML()}
     <div class="dash-grid">
       <div class="panel panel-pad">

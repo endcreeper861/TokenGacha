@@ -77,6 +77,23 @@ function toggleGpu(cardUid) {
   SFX.click();
 }
 
+// 卖出显卡：返还购价 60%（与 token 卖出系数一致），释放 PCIe 插槽
+function sellGpu(cardUid) {
+  const i = (S.gpus.cards || []).findIndex(c => c.uid === cardUid);
+  if (i < 0) return;
+  const card = S.gpus.cards[i];
+  const g = GPU_MAP[card.gpu];
+  const refund = Math.round(g.price * SELL_FACTOR);
+  S.gpus.cards.splice(i, 1);
+  S.money += refund;
+  S.stats.earn += refund;
+  S.peakMoney = Math.max(S.peakMoney, S.money);
+  addLedger(`🖥️ 卖出 ${g.tier} ${g.name}`, refund);
+  save(); renderAll();
+  SFX.coin();
+  toast(`🖥️ ${g.name} 已卖出，返还 ${fmt(refund)}（原价 ${fmt(g.price)} 的 60%），插槽已释放`);
+}
+
 /* ---------- Phase 4.3: tick 产出与电费 ---------- */
 // 单卡每秒产出 tokens（智能调度 +20% · Phase 6.2 推测解码 ×2）
 function gpuOutputPerSec(card) {

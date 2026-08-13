@@ -37,7 +37,6 @@ const TASK_TOKENS = 200000;
 const PAY_BOOST = 3.0;   // 工作报酬倍率（Phase 7.1 调校: 官方 API 全档位微利, 原 1.3）
 const BATCH_TASKS = 10;          // 手动一次工作 = 10 单
 const VICTORY_AT = 50000;
-const START_MONEY = 800;
 const SITE_URL = 'https://tokengacha.metagaruta.com';
 
 /* ---------- Phase 3: Token 品质系统 ---------- */

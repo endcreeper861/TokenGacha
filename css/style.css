@@ -109,10 +109,10 @@ header {
   z-index: 50;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 6px 16px;
   flex-wrap: wrap;
-  padding: 0 22px;
-  height: 60px;
+  padding: 8px 22px;
+  min-height: 60px;
   background: rgba(255, 255, 255, .92);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--line);
@@ -1211,6 +1211,18 @@ main {
   background: #fff
 }
 
+.mini-btn.danger {
+  color: #b91c1c;
+  border-color: #fecaca;
+  background: #fef2f2
+}
+
+.mini-btn.danger:hover {
+  color: #991b1b;
+  border-color: #fca5a5;
+  background: #fee2e2
+}
+
 /* ---------- 抽卡 overlay ---------- */
 #overlay {
   position: fixed;
@@ -1696,6 +1708,21 @@ main {
 }
 
 /* ---------- 移动端适配 & 短屏紧凑 ---------- */
+/* 中屏：顶栏内容多时压缩，减少换行 */
+@media(max-width:1080px) {
+  .logo small {
+    display: none
+  }
+
+  .hbtn .lbl {
+    display: none
+  }
+
+  .top-nav button {
+    padding: 7px 12px
+  }
+}
+
 @media(max-width:900px) {
   .work-grid {
     grid-template-columns: 1fr
@@ -2236,9 +2263,9 @@ footer {
 .clicker-head {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 10px
+  margin-bottom: 12px
 }
 
 .clicker-title {
@@ -2250,13 +2277,13 @@ footer {
   font-size: 11px;
   color: var(--faint);
   font-weight: 500;
-  margin-left: 8px
+  margin-left: 0
 }
 
 .clicker-stats {
   margin-left: auto;
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap
 }
 
@@ -2264,7 +2291,7 @@ footer {
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 9px;
-  padding: 4px 10px;
+  padding: 3px 10px;
   font-size: 11px;
   color: var(--dim)
 }
@@ -2295,8 +2322,8 @@ footer {
   transform: translateY(-1px)
 }
 
+/* 不设 :active 变换：连点时不缩放抖动，避免"卡手" */
 .clicker-btn:active {
-  transform: scale(.97);
   filter: brightness(.96)
 }
 

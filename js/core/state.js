@@ -9,7 +9,7 @@
 let S = null;
 function defaultState() {
   return {
-    ver: 4, stage: 1, money: 0, inv: [], uid: 1, freeTen: 0,
+    ver: 4, stage: 1, money: 0, inv: [], uid: 1,
     pity: { newbie: 0, standard: 0, flagship: 0 }, ledger: [],
     // 五阶段增量字段 (Phase 0.6 起)
     peakMoney: 0,                                   // 历史最高余额 (阶段解锁判定)

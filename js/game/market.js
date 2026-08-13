@@ -51,7 +51,7 @@ function sellPricePerUnit(c) {
 let evtTimer = null;
 function scheduleMarketEvt() {
   clearTimeout(evtTimer);
-  const wait = 3000 + Math.floor(Math.random() * 5000); // 3~8 分钟
+  const wait = 180 + Math.floor(Math.random() * 300); // 3~8 分钟
   evtTimer = setTimeout(() => {
     if (S.stage >= 3) triggerMarketEvt();
     scheduleMarketEvt();
@@ -64,12 +64,17 @@ function triggerMarketEvt() {
   SFX.win();
   toast(`🔥 市场行情：${RARITY[r].name} 稀有度 token 需求暴涨！卖出价 ×${EVT_BOOST}（60s）`, 4000);
 }
-// tick: 事件过期自动清除
+// tick: 事件过期自动清除 + 倒计时实时刷新（市场页 & 仪表盘）
 onTick(() => {
-  if (S.marketEvt && Date.now() > S.marketEvt.until) {
+  if (!S.marketEvt) return;
+  const left = Math.max(0, Math.ceil((S.marketEvt.until - Date.now()) / 1000));
+  if (left <= 0) {
     S.marketEvt = null;
     save(); renderAll();
+    return;
   }
+  const m = $('market-evt-left'); if (m) m.textContent = left + 's';
+  const d = $('dash-evt-left'); if (d) d.textContent = left + 's';
 });
 
 /* ---------- Phase 6.4: 市场操纵（阶段五） ---------- */
@@ -110,6 +115,7 @@ function sellSelfTokens() {
   }
   S.money += total;
   S.stats.earn += total;
+  S.peakMoney = Math.max(S.peakMoney, S.money); // 收入同步历史峰值（阶段解锁判定）
   addLedger('💱 卖出自产 token', total);
   save(); renderAll();
   SFX.coin();
@@ -142,14 +148,14 @@ function renderApi() {
 function renderSell() {
   const el = $('sell-amount');
   if (!el) return;
-  // Phase 4.5: 限时事件横幅
+  // Phase 4.5: 限时事件横幅（市场页）
   const evtBox = $('market-evt');
   if (evtBox) {
     if (S.marketEvt) {
       const r = S.marketEvt.rarity;
       const left = Math.max(0, Math.ceil((S.marketEvt.until - Date.now()) / 1000));
       evtBox.innerHTML = `<div class="market-evt-banner">
-        🔥 ${RARITY[r].name} token 需求暴涨 · 卖出价 ×${EVT_BOOST} · <b>${left}s</b>
+        🔥 ${RARITY[r].name} token 需求暴涨 · 卖出价 ×${EVT_BOOST} · <b id="market-evt-left">${left}s</b>
       </div>`;
     } else evtBox.innerHTML = '';
   }
