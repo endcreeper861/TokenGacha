@@ -21,10 +21,22 @@ const estValue = () => S.inv.reduce((s, c) => s + (c.tokens / TASK_TOKENS) * exp
 function workIncomePerSec() {
   if (!autoOn || !S.upgrades.s2_auto) return 0;
   const tier = selectedTier();
-  const cost = Math.round(tier.tokens * techTokenCostMult());
-  const card = bestCard(cost);
+  if (tasksForTier(tier) <= 0) return 0;
+  const card = bestCard(0) || bestCard(tierTaskCost(tier));
   if (!card) return 0;
   return 5 * expectedTaskPay(MMAP[card.m], card.q || 1);
+}
+
+/* ---------- 档位可用任务数 ---------- */
+// 某档位单次任务实际消耗（LRU 缓存会降低消耗）
+function tierTaskCost(tier) {
+  return Math.round(tier.tokens * techTokenCostMult());
+}
+// 某档位当前最多可接单数（token 可跨卡聚合，按总量计算）
+function tasksForTier(tier) {
+  const cost = tierTaskCost(tier);
+  if (cost <= 0) return 0;
+  return Math.floor(totalTokens() / cost);
 }
 
 /* ---------- 工作核心 ---------- */
@@ -63,18 +75,54 @@ function bestCard(minTokens = TASK_TOKENS) {
   }
   return best;
 }
-// 消耗 n 单（按稀有度优先），返回明细；tier 决定单耗与赔率
+// 按稀有度高→低排序，用于跨卡聚合消耗
+function sortCardsForConsumption() {
+  const ri = r => r === 'EX' ? RORDER.length : RORDER.indexOf(r);
+  return [...S.inv].sort((a, b) => {
+    const da = ri(MMAP[a.m].r), db = ri(MMAP[b.m].r);
+    if (db !== da) return db - da;
+    return (MMAP[b.m].idx || 0) - (MMAP[a.m].idx || 0);
+  });
+}
+// 从多张卡聚合扣除一次任务所需的 token，返回代表卡（最先消耗的高稀有度卡）
+function consumeTokensForTask(cost, sortedCards) {
+  if (cost <= 0) return null;
+  let remaining = cost;
+  let source = null;
+  const taken = [];
+  for (const c of sortedCards) {
+    if (remaining <= 0) break;
+    if (c.tokens <= 0) continue;
+    const take = Math.min(c.tokens, remaining);
+    c.tokens -= take;
+    remaining -= take;
+    taken.push({ card: c, amount: take });
+    if (!source) source = c;
+  }
+  if (remaining > 0) {
+    // 异常回滚，避免吞 token
+    for (const t of taken) t.card.tokens += t.amount;
+    return null;
+  }
+  for (const t of taken) {
+    if (t.card.tokens <= 0) {
+      const idx = S.inv.indexOf(t.card);
+      if (idx >= 0) S.inv.splice(idx, 1);
+    }
+  }
+  return source;
+}
+// 消耗 n 单（按稀有度优先，可跨卡聚合），返回明细；tier 决定单耗与赔率
 function consumeTasks(n, tier) {
   const items = [];
   // Phase 6.2: LRU 缓存 token 消耗 -20%
   const cost = Math.round(tier.tokens * techTokenCostMult());
+  const sortedCards = sortCardsForConsumption();
   for (let i = 0; i < n; i++) {
-    const c = bestCard(cost);
-    if (!c) break;
-    c.tokens -= cost;
-    if (c.tokens <= 0) S.inv.splice(S.inv.indexOf(c), 1); // 耗尽卡自动移除
-    const m = MMAP[c.m];
-    items.push({ m, res: taskPayout(m, tier, c.q || 1) });
+    const source = consumeTokensForTask(cost, sortedCards);
+    if (!source) break;
+    const m = MMAP[source.m];
+    items.push({ m, res: taskPayout(m, tier, source.q || 1) });
   }
   return items;
 }
@@ -159,14 +207,15 @@ function finishWork(tp, items, modeLabel, tier) {
   if (evts.great > 0 || total > 500) { burst(rect.left + rect.width / 2, rect.top + 100, ['#16a34a', '#f59e0b', '#fff'], 50, 6); }
   if (evts.disaster > 0) shake();
   working = false; save(); renderAll(); checkEnd();
-  if (totalTasks() <= 0 && S.money < Math.min(...Object.values(POOLS).map(p => p.price))) return;
-  if (totalTasks() <= 0) toast('⚡ Token 已全部耗尽 → 去「市场」补货');
+  const tierTasksLeft = tasksForTier(tier);
+  if (tierTasksLeft <= 0 && S.money < Math.min(...Object.values(POOLS).map(p => p.price))) return;
+  if (tierTasksLeft <= 0) toast('⚡ 当前档位 token 不足 → 可切换小单或去市场补货');
 }
 function doWork() {
   if (working) return;
   const tier = selectedTier(); // 档位对象
   const batch = (S.upgrades.s2_cloud ? 2 : 1) * (S.upgrades.s2_batch ? 2 : 1) * BATCH_TASKS;
-  const n = Math.min(batch, totalTasks());
+  const n = Math.min(batch, tasksForTier(tier));
   if (n <= 0) { toast('没有可用 token，先去市场买！'); SFX.bad(); return; }
   working = true; renderWork();
   SFX.click();
@@ -180,7 +229,7 @@ function doWork() {
 function doAuto() {
   if (working) return;
   const tier = selectedTier(); // 档位对象
-  const n = totalTasks();
+  const n = tasksForTier(tier);
   if (n <= 0) { toast('没有可用 token，先去市场买！'); SFX.bad(); return; }
   working = true; renderWork();
   SFX.pull();
@@ -202,9 +251,9 @@ function setTier(key) {
   SFX.click();
   renderWork();
 }
-// 档位可用性：该档消耗 ≤ 持有最大卡 token 数
+// 档位可用性：总 token 达到单次消耗即可（可跨卡聚合）
 function tierAvailable(tier) {
-  return S.inv.some(c => c.tokens >= tier.tokens);
+  return totalTokens() >= tierTaskCost(tier);
 }
 
 /* ---------- Phase 3.4: 自动化调度（tick 被动接单） ---------- */
@@ -220,7 +269,7 @@ onTick(() => {
   if (!autoOn || !S.upgrades.s2_auto) return;
   if (working) return;
   const tier = selectedTier(); // 档位对象
-  const n = Math.min(5, totalTasks());
+  const n = Math.min(5, tasksForTier(tier));
   if (n <= 0) return;
   const items = consumeTasks(n, tier);
   settleItems(items);

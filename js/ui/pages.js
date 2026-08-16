@@ -42,11 +42,35 @@ function renderBuy() {
   renderSell();
 }
 
+// tick 轻量刷新市场按钮可购买状态（自动接单回血后无需重进页面）
+function updateMarketAffordability() {
+  if (!$('page-market') || !$('page-market').classList.contains('active')) return;
+  const buyTokens = $('buy-tokens');
+  if (buyTokens) buyTokens.textContent = fmtK(totalTokens()) + ' tokens';
+  const buyTasks = $('buy-tasks');
+  if (buyTasks) buyTasks.textContent = totalTasks();
+  document.querySelectorAll('#pool-cards .pull-btn').forEach(btn => {
+    const poolKey = btn.dataset.pool;
+    const n = +btn.dataset.n;
+    const p = POOLS[poolKey];
+    if (!p) return;
+    const price = n === 10 ? p.tenPrice : p.price;
+    btn.disabled = S.money < price;
+  });
+  document.querySelectorAll('#api-grid .api-btn').forEach(btn => {
+    const r = btn.dataset.api;
+    const price = API_PRICE[r];
+    btn.disabled = S.money < price;
+  });
+}
+
 /* ---------- 渲染: 工作页 ---------- */
 function renderWork() {
-  const tk = totalTokens(), tasks = totalTasks();
+  const tk = totalTokens();
+  const tier = selectedTier(); // 返回档位对象本身
+  const tierTasks = tasksForTier(tier);
   $('w-tokens').innerHTML = fmtK(tk) + ' <small>tokens</small>';
-  $('w-tasks').innerHTML = tasks + ' <small>单</small>';
+  $('w-tasks').innerHTML = tierTasks + ' <small>单</small>';
   $('w-est').textContent = fmt(estValue());
   // Phase 3.3: 档位选择器
   const tierBox = $('tier-select');
@@ -56,7 +80,7 @@ function renderWork() {
       const avail = tierAvailable(t);
       return `<button class="tier-btn ${key === selTier ? 'active' : ''} ${avail ? '' : 'no-avail'}" data-tier="${key}"
         title="${avail ? '' : '当前 token 不足以接该档'}">
-        ${t.name}<small>${fmtK(t.tokens)} tokens/单 · 报酬 ×${t.payMult}</small>
+        ${t.name}<small>${fmtK(tierTaskCost(t))} tokens/单 · 报酬 ×${t.payMult}</small>
       </button>`;
     }).join('');
     tierBox.querySelectorAll('[data-tier]').forEach(b => b.onclick = () => setTier(b.dataset.tier));
@@ -83,15 +107,15 @@ function renderWork() {
       </div>`);
   }
   const bw = $('btn-work'), ba = $('btn-auto');
-  const tier = selectedTier(); // 返回档位对象本身
   const batch = (S.upgrades.s2_cloud ? 2 : 1) * (S.upgrades.s2_batch ? 2 : 1) * BATCH_TASKS;
-  const n = Math.min(batch, tasks);
-  bw.disabled = working || tasks <= 0;
-  ba.disabled = working || tasks <= 0;
-  $('work-sub').textContent = tasks > 0
-    ? `一键完成 ${n} 单（${tier.name}）· 消耗 ${fmtK(n * tier.tokens)} tokens`
+  const n = Math.min(batch, tierTasks);
+  const costPerTask = tierTaskCost(tier);
+  bw.disabled = working || tierTasks <= 0;
+  ba.disabled = working || tierTasks <= 0;
+  $('work-sub').textContent = tierTasks > 0
+    ? `一键完成 ${n} 单（${tier.name}）· 消耗 ${fmtK(n * costPerTask)} tokens`
     : '没有可用 token，去「市场」';
-  $('auto-sub').textContent = tasks > 0 ? `全部 ${tasks} 单一次清完 · ${fmtK(tk)} tokens` : '没有可用 token';
+  $('auto-sub').textContent = tierTasks > 0 ? `全部 ${tierTasks} 单一次清完 · ${fmtK(tierTasks * costPerTask)} tokens` : '没有可用 token';
 }
 function renderWorkLog() {
   // 日志只在会话内保留，渲染由 addWorkLog 完成

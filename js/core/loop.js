@@ -21,6 +21,9 @@ function renderDynamic() {
   renderHeader();
   tweenMoney();
   if (typeof updateAgiDynamic === 'function') updateAgiDynamic();
+  if (typeof updateMarketAffordability === 'function') updateMarketAffordability();
+  const workPage = $('page-work');
+  if (workPage && workPage.classList.contains('active') && typeof renderWork === 'function') renderWork();
 }
 
 /* ---------- dev 调试钩子 ---------- */
