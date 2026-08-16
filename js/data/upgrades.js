@@ -52,6 +52,11 @@ const UPGRADES = {
     id: 's2_batch', stage: 2, name: '📦 批量接单', price: 1000,
     desc: '手动一次 20 单（原 10 单）',
   },
+  s2_subscribe: {
+    id: 's2_subscribe', stage: 2, name: '📦 Token 自动订阅', price: 2500,
+    requires: ['s2_auto'],
+    desc: '解锁自动补货套餐：库存低于目标时自动购买官方 API token',
+  },
   /* ---------- 阶段三 · 硬件设施 ---------- */
   s3_pcie: {
     id: 's3_pcie', stage: 3, name: '🔌 PCIe 扩展卡', price: 8000,

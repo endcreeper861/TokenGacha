@@ -9,10 +9,14 @@ const EVT_BOOST = 1.5;    // 限时事件卖出价倍率
 const EVT_DURATION = 60;  // 事件持续时间（秒）
 
 // 官方 API 购买：按稀有度固定价购 1M token 包（q=0.95, src='official'）
-function buyApi(rarity) {
+// opts.auto=true 时用于自动订阅：静默购买，不刷 toast/音效/ledger/renderAll
+function buyApi(rarity, opts = {}) {
   const price = API_PRICE[rarity];
-  if (price == null) return;
-  if (S.money < price) { toast('💸 余额不足！'); SFX.bad(); return; }
+  if (price == null) return false;
+  if (S.money < price) {
+    if (!opts.auto) { toast('💸 余额不足！'); SFX.bad(); }
+    return false;
+  }
   // 稀有度对应模型里随机一张（图鉴解锁优先）
   const cands = MODELS.filter(m => m.r === rarity);
   const owned = cands.filter(m => S.dex[m.id] > 0);
@@ -29,10 +33,18 @@ function buyApi(rarity) {
   card.tokens += API_UNIT;
   card.max = Math.max(card.max, card.tokens);
   S.dex[m.id] = (S.dex[m.id] || 0) + 1; // 图鉴点亮（满足"首次购买"解锁判定）
+  if (opts.auto) {
+    S.stats.autoBuys = (S.stats.autoBuys || 0) + 1;
+    S.stats.autoBuySpent = (S.stats.autoBuySpent || 0) + price;
+    if (S.autobuy) S.autobuy.lastBuyAt = Date.now();
+    save();
+    return true;
+  }
   addLedger(`🏛️ 官方 API · ${m.name} ×1M`, -price);
   save(); renderAll();
   SFX.coin();
   toast(`🏛️ 已购入 <b>${m.name}</b> ×1M token（品质 95%）`);
+  return true;
 }
 
 // 可卖出 token 统计：仅自产（src='self'）可卖

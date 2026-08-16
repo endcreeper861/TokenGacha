@@ -9,7 +9,7 @@
 let S = null;
 function defaultState() {
   return {
-    ver: 5, stage: 1, money: 0, inv: [], uid: 1,
+    ver: 6, stage: 1, money: 0, inv: [], uid: 1,
     pity: { newbie: 0, standard: 0, flagship: 0 }, ledger: [],
     // 五阶段增量字段 (Phase 0.6 起)
     peakMoney: 0,                                   // 历史最高余额 (阶段解锁判定)
@@ -21,7 +21,8 @@ function defaultState() {
     aiRatio: 0.05,                                  // AI 占比 (AGI 判定, 初始 5%)
     agi: { points: 0, earned: 0, spent: 0, final: 0, auto: false, lastLogAt: 0, milestones: {} }, // 阶段五 AGI 研究点
     marketEvt: null,                                // 限时市场事件
-    stats: { pulls: 0, earn: 0, spent: 0, tasks: 0, best: '', disasters: 0, greats: 0, clicks: 0, selfTokens: 0, elecCost: 0, wages: 0, breakthroughs: 0, agiAt: null, startedAt: Date.now(), byR: { N: 0, R: 0, SR: 0, SSR: 0, UR: 0 } },
+    autobuy: { ...AUTOBUY_DEFAULT },                // Token 自动订阅（Phase 8）
+    stats: { pulls: 0, earn: 0, spent: 0, tasks: 0, best: '', disasters: 0, greats: 0, clicks: 0, selfTokens: 0, elecCost: 0, wages: 0, breakthroughs: 0, agiAt: null, startedAt: Date.now(), byR: { N: 0, R: 0, SR: 0, SSR: 0, UR: 0 }, autoBuys: 0, autoBuySpent: 0 },
     dex: {}, flags: { welcomed: false, ms: {}, stageBanners: {}, marketOpen: false, labHint: false, agi: false, superModel: false, manipAt: null, muted: false, cheated: false, agiMs: {} }
   };
 }
@@ -29,8 +30,10 @@ function save() { try { localStorage.setItem('tokengacha_v3', JSON.stringify(S))
 function load() {
   try {
     const s = JSON.parse(localStorage.getItem('tokengacha_v3'));
-    if (s && (s.ver === 4 || s.ver === 5) && typeof s.money === 'number') {
+    if (s && (s.ver === 4 || s.ver === 5 || s.ver === 6) && typeof s.money === 'number') {
       if (s.ver === 4) migrateV4toV5(s);
+      if (s.ver === 5) migrateV5toV6(s);
+      else if (s.ver === 6) normalizeAutoBuy(s);
       return s;
     }
   } catch (e) { }
@@ -53,6 +56,22 @@ function migrateV4toV5(s) {
     s.agi.final = AGI_FINAL_RP;
     s.agi.earned = Math.max(s.agi.earned || 0, (s.agi.spent || 0) + AGI_FINAL_RP);
   }
+}
+
+// ver=5 → 6：新增 Token 自动订阅；老档无损补齐
+function migrateV5toV6(s) {
+  s.ver = 6;
+  normalizeAutoBuy(s);
+}
+function normalizeAutoBuy(s) {
+  if (!s.autobuy) s.autobuy = { ...AUTOBUY_DEFAULT };
+  s.autobuy.enabled = !!s.autobuy.enabled;
+  s.autobuy.rarity = RORDER.includes(s.autobuy.rarity) ? s.autobuy.rarity : AUTOBUY_DEFAULT.rarity;
+  s.autobuy.target = AUTOBUY_TARGETS.includes(s.autobuy.target) ? s.autobuy.target : AUTOBUY_DEFAULT.target;
+  if (typeof s.autobuy.lastBuyAt !== 'number') s.autobuy.lastBuyAt = 0;
+  if (!s.stats) s.stats = {};
+  if (typeof s.stats.autoBuys !== 'number') s.stats.autoBuys = 0;
+  if (typeof s.stats.autoBuySpent !== 'number') s.stats.autoBuySpent = 0;
 }
 S = load() || defaultState();
 muted = !!S.flags.muted;

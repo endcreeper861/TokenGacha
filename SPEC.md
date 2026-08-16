@@ -145,6 +145,16 @@
 - **Step 7.4** ｜ 全量回归 ｜ 冒烟脚本全 Phase 断言 + 移动端 @media 三档断点手测 ｜ 预期：零 console 错误
 - **Step 7.5** ｜（可选）蒙特卡洛脚本 ｜ Node 脚本模拟阶段一二经济 1000 局，验证正期望与节奏 ｜ 预期：报告输出
 
+### Phase 8 · Token 自动订阅套餐（2026-08 追加）
+
+- **Step 8.1** ｜ data/upgrades.js + data/gacha.js ｜ 新增 S2 升级 `s2_subscribe`（¥2,500，`requires:['s2_auto']`，名称「📦 Token 自动订阅」）；新增 `AUTOBUY_TARGETS` 与 `AUTOBUY_DEFAULT` ｜ 预期：数据可读，旧升级列表不受影响
+- **Step 8.2** ｜ core/state.js ｜ ver 5→6；新增 `autobuy`（enabled/rarity/target/lastBuyAt）与 stats.autoBuys/autoBuySpent；`migrateV5toV6()` 无损补字段；load 接受 ver 4/5/6 ｜ 预期：旧档可迁移，新档可存取
+- **Step 8.3** ｜ game/market.js ｜ `buyApi(rarity, opts)` 支持 `opts.auto`：静默购买、不写 ledger、不刷 toast/音效/renderAll，返回成功与否；自动统计 autoBuys/autoBuySpent ｜ 预期：手动购买行为零回归
+- **Step 8.4** ｜ 新建 game/autobuy.js ｜ `autoBuyOnce()` 阈值补货（每秒至多 1 包）、开关/选包/目标库存操作、市场页面板渲染、`updateAutoBuyStatus()` 轻量刷新；注册 tick（在 market.js 后、work.js 前）｜ 预期：自动补货先于同秒自动接单
+- **Step 8.5** ｜ index.html / pages.js / loop.js ｜ 市场页新增 `#autobuy-panel`；`renderBuy` 调用 `renderAutoBuy`；`updateMarketAffordability` 与 `renderDynamic` 刷新订阅状态；资产页新增自动补货统计 ｜ 预期：市场/资产页信息完整
+- **Step 8.6** ｜ game/clicker.js ｜ `buyUpgrade` 支持 `requires` 前置校验；S2 升级卡未满足前置时禁用并提示 ｜ 预期：不能跳过 `s2_auto` 直接买订阅
+- **Step 8.7** ｜ css/style.css + modals.js + README ｜ 自动订阅面板样式、玩法帮助文案、README 特性与存档 ver=6 说明 ｜ 预期：视觉与文档同步
+
 ## 4. 验证与测试标准
 
 ### 环境（沿用仓库既有方法）

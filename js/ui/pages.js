@@ -40,6 +40,7 @@ function renderBuy() {
   box.querySelectorAll('.pull-btn').forEach(b => b.onclick = () => tryPull(b.dataset.pool, +b.dataset.n));
   renderApi();
   renderSell();
+  renderAutoBuy();
 }
 
 // tick 轻量刷新市场按钮可购买状态（自动接单回血后无需重进页面）
@@ -62,6 +63,7 @@ function updateMarketAffordability() {
     const price = API_PRICE[r];
     btn.disabled = S.money < price;
   });
+  if (typeof updateAutoBuyStatus === 'function') updateAutoBuyStatus();
 }
 
 /* ---------- 渲染: 工作页 ---------- */
@@ -148,6 +150,7 @@ function renderBalance() {
   const cells = [
     ['总抽数', S.stats.pulls], ['工作单数', S.stats.tasks], ['大成功', S.stats.greats], ['删库事故', S.stats.disasters],
     ['最佳出货', best ? best.name : '无'], ['图鉴', `${Object.keys(S.dex).length}/${MODELS.length}`],
+    ['自动补货', `${S.stats.autoBuys || 0} 次`], ['自动补货支出', fmt(S.stats.autoBuySpent || 0)],
   ];
   // Phase 7.2: AGI 总进度 + 五阶段收入明细（资产页）
   const a = agiProgress();

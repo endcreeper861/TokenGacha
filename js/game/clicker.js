@@ -71,6 +71,10 @@ function buyUpgrade(id) {
   const u = UPGRADES[id];
   if (!u) return;
   if (S.upgrades[id]) { toast('已拥有该升级'); SFX.bad(); return; }
+  if (u.requires && u.requires.some(r => !S.upgrades[r])) {
+    const names = u.requires.filter(r => !S.upgrades[r]).map(r => UPGRADES[r] ? UPGRADES[r].name : r).join('、');
+    toast(`🔒 需先解锁：${names}`); SFX.bad(); return;
+  }
   if (S.money < u.price) { toast('💸 余额不足！'); SFX.bad(); return; }
   S.money -= u.price;
   S.stats.spent += u.price;
@@ -116,11 +120,15 @@ function renderClicker() {
     grid2.innerHTML = '';
     for (const u of upgradesOfStage(2)) {
       const owned = !!S.upgrades[u.id];
+      const reqOk = (u.requires || []).every(id => !!S.upgrades[id]);
+      const afford = !owned && reqOk && S.money >= u.price;
+      const btnText = owned ? '已购买' : (!reqOk ? '🔒 需先购买自动化调度' : '💰 ¥' + u.price.toLocaleString('zh-CN'));
+      const disabled = owned || !reqOk || S.money < u.price;
       const d = document.createElement('div');
-      d.className = 'upgrade-card' + (owned ? ' owned' : '') + (S.money >= u.price && !owned ? ' afford' : '');
+      d.className = 'upgrade-card' + (owned ? ' owned' : '') + (afford ? ' afford' : '');
       d.innerHTML = `<div class="up-name">${u.name}${owned ? '<span class="up-ok">✓ 已拥有</span>' : ''}</div>
         <div class="up-desc">${u.desc}</div>
-        <button class="up-btn" data-up="${u.id}" ${owned || S.money < u.price ? 'disabled' : ''}>${owned ? '已购买' : '💰 ¥' + u.price.toLocaleString('zh-CN')}</button>`;
+        <button class="up-btn" data-up="${u.id}" ${disabled ? 'disabled' : ''} title="${!reqOk ? '需先购买 🤖 自动化调度' : ''}">${btnText}</button>`;
       grid2.appendChild(d);
     }
     grid2.querySelectorAll('[data-up]').forEach(b => b.onclick = () => buyUpgrade(b.dataset.up));

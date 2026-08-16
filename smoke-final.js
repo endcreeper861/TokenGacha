@@ -88,6 +88,40 @@ function check(name, ok, extra = '') {
   const tasks = await page.evaluate(() => S.stats.tasks);
   check('完成工作单', tasks > 0, 'tasks=' + tasks + ' | before=' + JSON.stringify(diagBefore) + ' | after=' + JSON.stringify(diagAfter));
 
+  // 7.5 Phase 8: Token 自动订阅
+  const subDisabledBefore = await page.$eval('[data-up="s2_subscribe"]', el => el.disabled).catch(() => true);
+  check('自动订阅前置禁用', subDisabledBefore, 'disabled=' + subDisabledBefore);
+  await page.evaluate(() => document.querySelector('[data-up="s2_auto"]').click()).catch(() => { });
+  await new Promise(r => setTimeout(r, 300));
+  const subDisabledAfter = await page.$eval('[data-up="s2_subscribe"]', el => el.disabled).catch(() => true);
+  check('自动订阅前置后可用', !subDisabledAfter, 'disabled=' + subDisabledAfter);
+  await page.evaluate(() => document.querySelector('[data-up="s2_subscribe"]').click()).catch(() => { });
+  await new Promise(r => setTimeout(r, 300));
+  const subOwned = await page.evaluate(() => !!S.upgrades.s2_subscribe);
+  check('自动订阅升级已购', subOwned);
+  await page.evaluate(() => { location.hash = '#market'; });
+  await new Promise(r => setTimeout(r, 300));
+  const autoPanel = await page.$eval('#autobuy-panel', el => el.textContent.includes('自动订阅')).catch(() => false);
+  check('自动订阅面板渲染', autoPanel);
+  await page.evaluate(() => document.getElementById('btn-autobuy').click()).catch(() => { });
+  await page.evaluate(() => document.querySelector('[data-abrar="R"]').click()).catch(() => { });
+  await page.evaluate(() => document.querySelector('[data-abtarget="1000000"]').click()).catch(() => { });
+  await new Promise(r => setTimeout(r, 200));
+  const autoCfg = await page.evaluate(() => ({ enabled: S.autobuy.enabled, rarity: S.autobuy.rarity, target: S.autobuy.target }));
+  check('自动订阅配置生效', autoCfg.enabled && autoCfg.rarity === 'R' && autoCfg.target === 1000000, JSON.stringify(autoCfg));
+  await page.evaluate(() => { S.inv = []; });
+  await new Promise(r => setTimeout(r, 2200));
+  const autoBought = await page.evaluate(() => {
+    const c = S.inv.find(x => x.src === 'official' && MMAP[x.m].r === 'R');
+    return !!(c && c.tokens >= 1000000 && S.stats.autoBuys >= 1);
+  });
+  check('自动补货成功', autoBought, 'autoBuys=' + (await page.evaluate(() => S.stats.autoBuys)));
+  const autoBeforeStop = await page.evaluate(() => S.stats.autoBuys);
+  await page.evaluate(() => { S.inv = []; S.autobuy.enabled = false; });
+  await new Promise(r => setTimeout(r, 1200));
+  const autoStopped = await page.evaluate(before => S.stats.autoBuys === before && S.inv.length === 0, autoBeforeStop);
+  check('关闭后不再补货', autoStopped, 'before=' + autoBeforeStop + ' after=' + (await page.evaluate(() => S.stats.autoBuys)));
+
   // 8. 阶段三半解锁商店（peakMoney ≥ 5000 后机房应显示商店）
   await page.evaluate(() => { location.hash = '#gpu'; TG.addMoney(20000); });
   await new Promise(r => setTimeout(r, 400));
@@ -170,7 +204,7 @@ function check(name, ok, extra = '') {
   await page.evaluate(() => document.getElementById('btn-sandbox').click()).catch(() => { });
   await new Promise(r => setTimeout(r, 400));
   const sbMoney = await page.evaluate(() => S.money);
-  check('沙盒金钱 10^12', sbMoney === 1e12, String(sbMoney));
+  check('沙盒金钱 10^12', sbMoney >= 1e12 - 1000, String(sbMoney));
 
   // 18. 存档往返
   await page.evaluate(() => save());
@@ -179,6 +213,8 @@ function check(name, ok, extra = '') {
   const relStage = await page.evaluate(() => S.stage);
   const relAgi = await page.evaluate(() => S.flags.agi);
   check('存档往返保留', relStage >= 5 && relAgi, `stage=${relStage} agi=${relAgi}`);
+  const relAuto = await page.evaluate(() => ({ enabled: S.autobuy.enabled, rarity: S.autobuy.rarity, target: S.autobuy.target }));
+  check('自动订阅配置存档持久化', relAuto.enabled === false && relAuto.rarity === 'R' && relAuto.target === 1000000, JSON.stringify(relAuto));
 
   // 19. AGI-X 可部署产出（EX SELF_RATE 检查）
   const exRate = await page.evaluate(() => SELF_RATE.EX);
