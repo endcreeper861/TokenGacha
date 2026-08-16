@@ -2255,6 +2255,7 @@ footer {
 /* ---------- Phase 2: 点击器 & S1 升级 ---------- */
 .clicker-wrap {
   margin-bottom: 14px;
+  padding: 13px;
   background: linear-gradient(135deg, #ffffff, #f4f7ff);
   border: 1.5px solid #c7d9ff;
   box-shadow: var(--shadow-lg)
@@ -2989,3 +2990,31 @@ footer {
   cursor: pointer
 }
 .qbtn:hover { background: #eef3ff }
+
+/* ---------- Phase A/B/C: 阶段五 AGI 研究点 UI ---------- */
+.tt-rp {
+  font-size: 10px;
+  color: var(--dim);
+  font-weight: 700;
+  margin-top: 2px
+}
+.tt-ai {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--cyan)
+}
+#btn-agi-auto {
+  margin-left: 8px;
+  font-size: 10.5px
+}
+.agi-panel .research-meta {
+  flex-wrap: wrap
+}
+.research-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--dim);
+  flex-wrap: wrap;
+  margin-top: 6px
+}

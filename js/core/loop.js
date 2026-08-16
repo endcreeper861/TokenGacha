@@ -16,13 +16,32 @@ function tick() {
 }
 setInterval(tick, 1000);
 
-// 局部刷新: 仅更新头部资源数字（廉价路径）
-function renderDynamic() { renderHeader(); tweenMoney(); }
+// 局部刷新: 仅更新头部资源数字 + 阶段五 AGI 研究面板（廉价路径）
+function renderDynamic() {
+  renderHeader();
+  tweenMoney();
+  if (typeof updateAgiDynamic === 'function') updateAgiDynamic();
+}
 
 /* ---------- dev 调试钩子 ---------- */
 window.TG = {
   get S() { return S; },          // 实时引用（S 会被重开档重新赋值）
   save,
   addMoney(amt) { S.money += amt; if (amt > 0) S.stats.earn += amt; S.peakMoney = Math.max(S.peakMoney, S.money); save(); renderAll(); },
+  addRp(amt) {
+    if (!S.agi) S.agi = { points: 0, earned: 0, spent: 0, final: 0, auto: false, lastLogAt: 0, milestones: {} };
+    S.agi.earned += amt;
+    S.agi.points += amt;
+    save(); renderAll();
+  },
+  finishAgi() {
+    if (!S.agi) S.agi = { points: 0, earned: 0, spent: 0, final: 0, auto: false, lastLogAt: 0, milestones: {} };
+    S.agi.earned = Math.max(S.agi.earned || 0, AGI_RP_TOTAL);
+    S.agi.points = 0;
+    S.agi.final = AGI_FINAL_RP;
+    S.aiRatio = 1;
+    if (typeof checkAGI === 'function') checkAGI();
+    save(); renderAll();
+  },
   skipTo(stage) { S.stage = Math.max(S.stage, stage); save(); renderAll(); },
 };

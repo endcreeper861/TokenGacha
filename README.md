@@ -3,7 +3,7 @@
 一家"神秘"的 LLM API 中转站。从手写代码白手起家，五阶段并行叠加，最终研发出自己的 AGI。
 五个阶段：🔨 手写代码 → 🤖 AI 接单 → 🖥️ GPU 机房 → 🔬 模型研发 → 🧠 AGI 之路（通关解锁沙盒）。
 
-**🔗 在线试玩 / Play Now: https://tokengacha.metagaruta.com**
+**🔗 在线试玩 / Play Now: https://endcreeper861.github.io/TokenGacha**
 
 ## 特性
 
@@ -12,7 +12,8 @@
 - 💼 三档工作（小/中/大单）+ 品质系统（盲盒 60%~100% / 官方 95% / 自产 100%）+ 177 条爆笑终端文本
 - 🖥️ 六档显卡机房（RTX 4060 → B200），自动产出纯净 token，限时市场事件
 - 🔬 三档研究员 + 边际递减 + 灵感迸发，研发出超级模型 AGI-X
-- 🧠 九项技术树 + AI 占比 100% → AGI 通关 + 沙盒模式
+- 🧠 九项技术树 + AGI 研究点（RP）+ 最终协议 → AGI 通关 + 沙盒模式
+- ⌨️ 工作台支持键盘写代码：按任意字母或空格即可推进手写代码进度
 - 💰 充值作弊模式、成就里程碑、分享战绩卡片
 - 📦 静态三件套（`index.html` + `css/` + `js/`），零依赖，开箱即玩
 
@@ -32,7 +33,7 @@
 | `js/ui/` | 界面：router.js（路由）/ pages.js（渲染）/ dashboard.js（仪表盘）/ modals.js（弹窗）/ share.js（分享） |
 | `js/app.js` | 入口：事件绑定 + 启动引导 |
 
-> 💾 存档使用 localStorage key `tokengacha_v3`（ver=4）。**v3 硬重置**：不兼容旧版 `tokengacha_v2` 存档，旧档被忽略。
+> 💾 存档使用 localStorage key `tokengacha_v3`（ver=5，v4 自动迁移）。**v3 硬重置**：不兼容旧版 `tokengacha_v2` 存档，旧档被忽略。
 > 🛠️ dev 调试钩子：控制台 `window.TG`（`S` 实时存档 / `addMoney` / `skipTo` / `save`）。
 
 ---
@@ -42,7 +43,7 @@
 A mysterious LLM API relay station. Start from hand-writing code and work your way up to building your own AGI across five stacking stages:
 🔨 Hand Coding → 🤖 AI Contract Work → 🖥️ GPU Farm → 🔬 Model Research → 🧠 AGI Road (win → sandbox mode).
 
-**🔗 Play Now: https://tokengacha.metagaruta.com**
+**🔗 Play Now: https://endcreeper861.github.io/TokenGacha**
 
 ## Features
 
@@ -51,7 +52,8 @@ A mysterious LLM API relay station. Start from hand-writing code and work your w
 - 💼 3 work tiers + token quality system (gacha 60–100% / official 95% / self-made 100%) + 177 hilarious terminal lines
 - 🖥️ 6 GPU tiers (RTX 4060 → B200), auto token production, timed market events
 - 🔬 3 researcher tiers with diminishing returns & inspiration breakthroughs → supermodel AGI-X
-- 🧠 9-tech tree, 100% AI share → AGI win + sandbox mode
+- 🧠 9-tech tree + AGI research points (RP) + final protocol → AGI win + sandbox mode
+- ⌨️ Keyboard coding on Work page: any letter or Space advances hand-coding progress
 - 💰 Cheat top-up mode, milestones, shareable stat cards
 - 📦 Static trio (`index.html` + `css/` + `js/`), zero dependencies
 
@@ -71,5 +73,5 @@ Open `index.html` in any browser (file:// works), or deploy to any static host.
 | `js/ui/` | UI: router / pages / dashboard / modals / share |
 | `js/app.js` | Entry: event binding + bootstrap |
 
-> 💾 Saves use the localStorage key `tokengacha_v3` (ver=4). **Hard reset**: legacy `tokengacha_v2` saves are ignored.
+> 💾 Saves use the localStorage key `tokengacha_v3` (ver=5, v4 auto-migrates). **Hard reset**: legacy `tokengacha_v2` saves are ignored.
 > 🛠️ Dev hooks: `window.TG` in console (`S` live state / `addMoney` / `skipTo` / `save`).

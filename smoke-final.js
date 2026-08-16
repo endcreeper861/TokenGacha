@@ -140,19 +140,26 @@ function check(name, ok, extra = '') {
   const stage5 = await page.evaluate(() => S.stage);
   check('阶段五自动进入', stage5 >= 5, 'stage=' + stage5);
 
-  // 15. 技术树渲染 + AI 占比
+  // 15. 技术树渲染 + AGI 研究面板 + AI 占比
   await page.evaluate(() => { location.hash = '#lab'; });
   await new Promise(r => setTimeout(r, 300));
   const techNodes = await page.$$eval('.tech-node', els => els.length);
   check('技术树 9 节点', techNodes === 9, String(techNodes));
+  const agiPanelVisible = await page.$eval('#lab-root', el => el.textContent.includes('AGI 研究'));
+  check('AGI 研究面板渲染', agiPanelVisible);
   const ai0 = await page.evaluate(() => S.aiRatio);
   check('AI 占比初始 5%', ai0 === 0.05, String(ai0));
 
-  // 16. 解锁全部技术 → AGI
-  await page.evaluate(() => {
+  // 16. 解锁全部技术后不立即 AGI，完成最终协议才 AGI
+  const afterTechs = await page.evaluate(() => {
     TG.addMoney(1e9);
+    TG.addRp(1e9);
     for (const id of TECH_ORDER) unlockTech(id);
+    const after = S.aiRatio;
+    TG.finishAgi();
+    return after;
   });
+  check('九技术后 AI=95%（不立即通关）', Math.abs(afterTechs - 0.95) < 1e-9, 'afterTechs=' + afterTechs);
   await new Promise(r => setTimeout(r, 1200)); // 等 AGI 弹窗延迟显示
   const agi = await page.evaluate(() => S.flags.agi);
   check('AGI 达成', agi);

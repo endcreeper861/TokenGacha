@@ -201,7 +201,7 @@ function renderHeader() {
   // 数值（Phase 4: 真实显存/算力）
   $('h-vram').textContent = fmtK(totalVramUsed());
   $('h-flops').textContent = fmtK(totalFlops());
-  $('h-research').textContent = Math.round(S.research.progress) + '%';
+  $('h-research').textContent = isUnlocked(5) ? fmtK(S.agi ? S.agi.earned : 0) + ' RP' : Math.round(S.research.progress) + '%';
 }
 function tweenMoney() {
   const el = $('h-money');
@@ -315,9 +315,106 @@ function researcherCardsHTML() {
       <div class="res-name">${r.name}<span class="res-count">×${n}</span></div>
       <div class="res-desc">${r.desc} · 边际递减 1/√n</div>
       <div class="res-meta">当前贡献：${(r.speed * staffDiminish(Math.max(1, n))).toFixed(1)}× · 月薪 ¥${r.salary.toLocaleString('zh-CN')}</div>
-      <button class="up-btn" data-hire="${k}" ${!affordable ? 'disabled' : ''}>👥 雇佣（需余额 ≥ ¥${r.req.toLocaleString('zh-CN')}）</button>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button class="up-btn" data-hire="${k}" style="flex:1" ${!affordable ? 'disabled' : ''}>👥 雇佣（≥¥${r.req.toLocaleString('zh-CN')}）</button>
+        <button class="mini-btn danger" data-fire="${k}" style="flex:0 0 auto" ${n <= 0 ? 'disabled' : ''}>解雇</button>
+      </div>
     </div>`;
   }).join('');
+}
+/* ---------- 阶段五：AGI 研究面板 ---------- */
+function fmtETA(sec) {
+  if (!isFinite(sec) || sec < 0) return '∞';
+  if (sec < 60) return Math.ceil(sec) + '秒';
+  if (sec < 3600) return Math.ceil(sec / 60) + '分钟';
+  return (sec / 3600).toFixed(1) + '小时';
+}
+function nextTechNeed() {
+  const avail = TECH_ORDER.filter(id => !S.techs.includes(id) && TECHS[id].pre.every(p => S.techs.includes(p)));
+  if (!avail.length) return null;
+  return avail.map(id => TECHS[id]).sort((a, b) => a.rp - b.rp)[0];
+}
+function agiPanelHTML() {
+  if (!S.agi) S.agi = { points: 0, earned: 0, spent: 0, final: 0, auto: false, lastLogAt: 0, milestones: {} };
+  const a = S.agi;
+  const total = AGI_RP_TOTAL;
+  const rate = agiRpPerSec();
+  const pct = Math.min(100, a.earned / total * 100);
+  const next = nextTechNeed();
+  let goalHtml = '';
+  if (next) {
+    const need = Math.max(0, next.rp - a.points);
+    const needMoney = Math.max(0, next.price - S.money);
+    const eta = need > 0 ? fmtETA(need / Math.max(rate, 0.001)) : (needMoney > 0 ? '等金钱' : '可购买');
+    goalHtml = `<div class="research-meta" style="margin-top:6px">
+      <span>🎯 下一技术：${next.name}</span>
+      <span>还差 ${fmtNum(need)} RP</span>
+      ${needMoney > 0 ? `<span>还差 ¥${fmtNum(needMoney)}</span>` : ''}
+      <span>约 ${eta}</span>
+    </div>`;
+  } else {
+    const step = Math.min(AGI_FINAL_STEPS.length - 1, Math.floor((a.final || 0) / (AGI_FINAL_RP / AGI_FINAL_STEPS.length)));
+    const stepLeft = Math.max(0, AGI_FINAL_RP - (a.final || 0));
+    goalHtml = `<div class="research-meta" style="margin-top:6px">
+      <span>👾 最终协议阶段 ${step + 1}/3</span>
+      <span>还需 ${fmtNum(stepLeft)} RP</span>
+      <span>约 ${fmtETA(stepLeft / Math.max(rate, 0.001))}</span>
+    </div>`;
+  }
+  const autoBtn = `<button class="mini-btn" id="btn-agi-auto" style="${a.auto ? 'background:#16a34a;color:#fff' : ''}">${a.auto ? '⏸ 自动解锁：开' : '▶ 自动解锁：关'}</button>`;
+  return `<div class="panel panel-pad" style="margin-bottom:14px">
+    <div class="panel-title">🧠 AGI 研究<span class="right"><span id="agi-pct">${pct.toFixed(1)}%</span> ${autoBtn}</span></div>
+    <div class="agi-bar"><i id="agi-bar" style="width:${pct}%"></i></div>
+    <div class="research-meta">
+      <span id="agi-earned">${fmtNum(a.earned)} / ${fmtNum(total)} RP</span>
+      <span id="agi-rate">⚡ +${rate.toFixed(1)}/s</span>
+      <span>💸 工资 ${fmt2(wagePerSec())}/s</span>
+    </div>
+    <div id="agi-goal">${goalHtml}</div>
+  </div>`;
+}
+// 每秒轻量刷新 AGI 研究面板（不重建整棵 DOM）
+function updateAgiDynamic() {
+  if (!isUnlocked(5) || !S.agi) return;
+  const a = S.agi;
+  const total = AGI_RP_TOTAL;
+  const rate = agiRpPerSec();
+  const pct = Math.min(100, a.earned / total * 100);
+  const pctEl = $('agi-pct'); if (pctEl) pctEl.textContent = pct.toFixed(1) + '%';
+  const bar = $('agi-bar'); if (bar) bar.style.width = pct + '%';
+  const earned = $('agi-earned'); if (earned) earned.textContent = `${fmtNum(a.earned)} / ${fmtNum(total)} RP`;
+  const rateEl = $('agi-rate'); if (rateEl) rateEl.textContent = `⚡ +${rate.toFixed(1)}/s`;
+  // 仪表盘 AGI 总进度也轻量刷新
+  const dashPct = $('agi-dash-pct');
+  if (dashPct) {
+    const a = agiProgress();
+    dashPct.textContent = a.pct + '%';
+    const dashBar = $('agi-dash-bar'); if (dashBar) dashBar.style.width = a.pct + '%';
+    const dashTxt = $('agi-dash-txt'); if (dashTxt) dashTxt.textContent = a.txt;
+  }
+
+  const goalEl = $('agi-goal');
+  if (!goalEl) return;
+  const next = nextTechNeed();
+  if (next) {
+    const need = Math.max(0, next.rp - a.points);
+    const needMoney = Math.max(0, next.price - S.money);
+    const eta = need > 0 ? fmtETA(need / Math.max(rate, 0.001)) : (needMoney > 0 ? '等金钱' : '可购买');
+    goalEl.innerHTML = `<div class="research-meta" style="margin-top:6px">
+      <span>🎯 下一技术：${next.name}</span>
+      <span>还差 ${fmtNum(need)} RP</span>
+      ${needMoney > 0 ? `<span>还差 ¥${fmtNum(needMoney)}</span>` : ''}
+      <span>约 ${eta}</span>
+    </div>`;
+  } else {
+    const step = Math.min(AGI_FINAL_STEPS.length - 1, Math.floor((a.final || 0) / (AGI_FINAL_RP / AGI_FINAL_STEPS.length)));
+    const stepLeft = Math.max(0, AGI_FINAL_RP - (a.final || 0));
+    goalEl.innerHTML = `<div class="research-meta" style="margin-top:6px">
+      <span>👾 最终协议阶段 ${step + 1}/3</span>
+      <span>还需 ${fmtNum(stepLeft)} RP</span>
+      <span>约 ${fmtETA(stepLeft / Math.max(rate, 0.001))}</span>
+    </div>`;
+  }
 }
 function renderLab() {
   // 半解锁：peakMoney≥50000 时显示研究员雇佣区（可雇首名触发正式解锁）
@@ -336,6 +433,7 @@ function renderLab() {
         </div>
       </div>`;
       root.querySelectorAll('[data-hire]').forEach(b => b.onclick = () => hireResearcher(b.dataset.hire));
+      root.querySelectorAll('[data-fire]').forEach(b => b.onclick = () => fireResearcher(b.dataset.fire));
     } else root.innerHTML = '';
     return;
   }
@@ -345,13 +443,15 @@ function renderLab() {
   // 进度大条
   const speed = researchSpeed();
   const wage = wagePerSec();
-  // Phase 6.3: 技术树面板（阶段五解锁后显示）
+  // 阶段五：AGI 研究面板 + 技术树
+  const agiPanel = isUnlocked(5) ? agiPanelHTML() : '';
   const techPanel = isUnlocked(5) ? `
     <div class="panel panel-pad" style="margin-top:14px">
-      <div class="panel-title">🧠 技术树<span class="right">AI 占比 ${Math.round(S.aiRatio * 100)}% · 解锁 ${S.techs.length}/9 达成 AGI</span></div>
+      <div class="panel-title">🧠 技术树<span class="right">AI 占比 ${Math.round(S.aiRatio * 100)}% · 解锁 ${S.techs.length}/9 ${allTechsUnlocked() ? '· 最终协议进行中' : '后开启最终协议'}</span></div>
       <div class="tech-tree">${techTreeHTML()}</div>
     </div>` : '';
   root.innerHTML = `
+    ${agiPanel}
     <div class="dash-grid">
       <div class="panel panel-pad">
         <div class="panel-title">🧠 研究进度<span class="right">${progress.toFixed(2)}%${S.research.done ? ' · ✅ 已完成' : ''}</span></div>
@@ -373,8 +473,12 @@ function renderLab() {
     </div>
     ${techPanel}`;
   root.querySelectorAll('[data-hire]').forEach(b => b.onclick = () => hireResearcher(b.dataset.hire));
+  root.querySelectorAll('[data-fire]').forEach(b => b.onclick = () => fireResearcher(b.dataset.fire));
   // Phase 6.3: 技术树购买
   root.querySelectorAll('[data-techbuy]').forEach(b => b.onclick = () => unlockTech(b.dataset.techbuy));
+  // 阶段五：自动解锁开关
+  const autoBtn = $('btn-agi-auto');
+  if (autoBtn) autoBtn.onclick = () => { if (S.agi) { S.agi.auto = !S.agi.auto; save(); renderLab(); toast(S.agi.auto ? '▶ 自动解锁已开启' : '⏸ 自动解锁已关闭'); } };
   // S4 升级卡片
   const g4 = $('s4-upgrades');
   if (g4) {
@@ -400,6 +504,11 @@ function renderResearchLog() {
   if (S.stats.breakthroughs > 0) rows.push(`<div class="rlog-row">💡 灵感迸发 ×${S.stats.breakthroughs}（每次 +10%）</div>`);
   rows.push(`<div class="rlog-row">💸 累计工资支出 ${fmt(S.stats.wages)}</div>`);
   if (S.research.done) rows.push('<div class="rlog-row">🧠 AGI-X 研发完成！</div>');
+  if (isUnlocked(5) && S.agi) {
+    rows.push(`<div class="rlog-row">🧠 AGI 研究点累计 ${fmtNum(S.agi.earned)}</div>`);
+    rows.push(`<div class="rlog-row">⚡ 当前 AGI 速率 ${agiRpPerSec().toFixed(1)} RP/s</div>`);
+    if (S.agi.final > 0) rows.push(`<div class="rlog-row">👾 最终协议进度 ${fmtNum(S.agi.final)} / ${fmtNum(AGI_FINAL_RP)}</div>`);
+  }
   log.innerHTML = rows.length ? rows.join('') : '<div class="rlog-empty">雇佣研究员开始研究…</div>';
 }
 
@@ -412,11 +521,13 @@ function techTreeHTML() {
       const unlockable = canUnlockTech(id);
       const st = owned ? 'owned' : (unlockable ? 'unlockable' : 'locked');
       const pre = t.pre.length ? `<small class="tt-pre">需 ${t.pre.map(p => TECHS[p].name.replace(/^\S+\s/, '')).join('、')}</small>` : '';
+      const rp = S.agi ? S.agi.points : 0;
       return `<div class="tech-node ${st}" data-tech="${id}">
         <div class="tt-name">${t.name}</div>
         <div class="tt-desc">${t.desc}</div>
-        <div class="tt-ai">AI +${t.ai}%</div>
-        ${owned ? '<div class="tt-ok">✓ 已解锁</div>' : `<button class="tt-btn" data-techbuy="${id}" ${unlockable ? '' : 'disabled'}>💰 ¥${t.price.toLocaleString('zh-CN')}</button>`}
+        <div class="tt-ai">AI 上限 +${t.ai}%</div>
+        <div class="tt-rp">🧪 ${fmtNum(t.rp)} RP${owned ? '' : ` · 已有 ${fmtNum(rp)}`}</div>
+        ${owned ? '<div class="tt-ok">✓ 已解锁</div>' : `<button class="tt-btn" data-techbuy="${id}" ${unlockable ? '' : 'disabled'}>💰 ¥${t.price.toLocaleString('zh-CN')} + 🧪 ${fmtNum(t.rp)}</button>`}
         ${pre}
       </div>`;
     }).join('');

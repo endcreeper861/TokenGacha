@@ -25,6 +25,7 @@ function iconImg(slug, cls = '') {
 const $ = id => document.getElementById(id);
 const fmt = n => '¥' + Math.round(n).toLocaleString('zh-CN');
 const fmt2 = n => '¥' + n.toLocaleString('zh-CN', { maximumFractionDigits: 1 });
+const fmtNum = n => Math.round(n).toLocaleString('zh-CN');
 const fmtK = n => n >= 10000 ? (n / 10000).toLocaleString('zh-CN', { maximumFractionDigits: 1 }) + '万' : n >= 1000 ? (n / 1000).toLocaleString('zh-CN', { maximumFractionDigits: 1 }) + 'K' : Math.round(n);
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 function addLedger(label, amt) {

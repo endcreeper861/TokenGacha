@@ -4,12 +4,18 @@
    解锁校验 / 效果挂载 / AI 占比 / AGI 判定 / 沙盒
    ================================================================ */
 
-// 解锁校验：金钱 + 前置技术
+// 是否已解锁全部技术
+function allTechsUnlocked() {
+  return TECH_ORDER.every(id => S.techs.includes(id));
+}
+
+// 解锁校验：金钱 + AGI 研究点 + 前置技术
 function canUnlockTech(id) {
   const t = TECHS[id];
   if (!t) return false;
   if (S.techs.includes(id)) return false;
   if (S.money < t.price) return false;
+  if (!S.agi || (S.agi.points || 0) < (t.rp || 0)) return false;
   return t.pre.every(p => S.techs.includes(p));
 }
 // 解锁技术
@@ -19,13 +25,18 @@ function unlockTech(id) {
   if (S.techs.includes(id)) { toast('已解锁该技术'); return; }
   if (!canUnlockTech(id)) {
     const need = t.pre.filter(p => !S.techs.includes(p)).map(p => TECHS[p].name).join('、');
-    toast(need ? `🔒 需先解锁：${need}` : '💸 金钱不足或条件不满足');
+    if (need) toast(`🔒 需先解锁：${need}`);
+    else if ((S.agi ? S.agi.points : 0) < (t.rp || 0)) toast(`🧪 研究点不足：需要 ${fmtNum(t.rp)} RP`);
+    else toast('💸 金钱不足或条件不满足');
     SFX.bad();
     return;
   }
   S.money -= t.price;
   S.stats.spent += t.price;
   S.techs.push(id);
+  if (!S.agi) S.agi = { points: 0, earned: 0, spent: 0, final: 0, auto: false, lastLogAt: 0, milestones: {} };
+  S.agi.points -= t.rp;
+  S.agi.spent = (S.agi.spent || 0) + t.rp;
   S.aiRatio = aiRatio(); // 重算 AI 占比
   addLedger(`🧠 解锁技术 · ${t.name}`, -t.price);
   save(); renderAll();
@@ -33,6 +44,19 @@ function unlockTech(id) {
   toast(`🧠 ${t.name} 已解锁！AI 占比 ${Math.round(S.aiRatio * 100)}%`);
   checkAGI();
 }
+// 自动解锁：开启后，点数+金钱足够时按顺序自动买第一个可解锁技术
+function autoUnlockTech() {
+  if (!S.agi || !S.agi.auto) return;
+  for (const id of TECH_ORDER) {
+    if (canUnlockTech(id)) {
+      unlockTech(id);
+      return;
+    }
+  }
+}
+onTick(() => {
+  if (S.agi && S.agi.auto) autoUnlockTech();
+});
 
 /* ---------- 效果乘区 ---------- */
 // 工作速度（混合注意力 +40%）
@@ -72,11 +96,14 @@ function techResearchMult() {
 }
 
 /* ---------- AI 占比 ---------- */
-// 初始 5% + 每解锁技术增量
+// 初始 5% + 每解锁技术增量 + 最终协议 5%
 function aiRatio() {
   let v = 0.05;
   for (const id of TECH_ORDER) {
     if (S.techs.includes(id)) v += TECHS[id].ai / 100;
+  }
+  if (allTechsUnlocked() && S.agi) {
+    v += 0.05 * Math.min(1, (S.agi.final || 0) / AGI_FINAL_RP);
   }
   return Math.min(1, v);
 }
@@ -102,6 +129,7 @@ function agiWinHTML() {
     ['⏱️ 总时长', durTxt],
     ['💰 累计赚取', fmt(S.stats.earn)],
     ['🧠 技术数', `${S.techs.length}/9`],
+    ['🧪 AGI 研究点', S.agi ? fmtNum(S.agi.earned) : '-'],
     ['🏆 最佳模型', best ? best.name : '无'],
     ['💥 删库事故', S.stats.disasters],
     ['🎰 抽卡次数', S.stats.pulls],
@@ -122,6 +150,11 @@ function enterSandbox() {
   S.stats.earn = 1e12;
   for (const u of Object.values(UPGRADES)) S.upgrades[u.id] = true;
   for (const id of TECH_ORDER) if (!S.techs.includes(id)) S.techs.push(id);
+  if (!S.agi) S.agi = { points: 0, earned: 0, spent: 0, final: 0, auto: false, lastLogAt: 0, milestones: {} };
+  S.agi.earned = AGI_RP_TOTAL;
+  S.agi.points = 0;
+  S.agi.final = AGI_FINAL_RP;
+  S.agi.spent = AGI_RP_TOTAL - AGI_FINAL_RP;
   S.aiRatio = 1;
   S.peakMoney = 1e12;
   S.research.progress = 100;

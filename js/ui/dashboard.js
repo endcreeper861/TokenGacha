@@ -5,22 +5,27 @@
    (clickerIncomePerSec 由 js/game/clicker.js 提供)
    ================================================================ */
 
-/* ---------- Phase 6.6: AGI 总进度（研究进度 × 技术占比加权） ---------- */
+/* ---------- Phase 6.6: AGI 总进度（研究 40% + 阶段五 RP 60%） ---------- */
 function agiProgress() {
   // 阶段四前：研究进度
   if (S.stage < 4) return { pct: 0, txt: '研究进度 0% · 解锁阶段四后开启' };
   const res = Math.min(100, S.research.progress) / 100;
-  const ai = S.aiRatio;
-  // 加权：研究 60% + AI 占比 40%（到达 AGI 需研究 100% 且 AI 100%）
-  const pct = Math.round((res * 0.6 + ai * 0.4) * 100);
-  return { pct, txt: `研究 ${Math.round(res * 100)}% · AI 占比 ${Math.round(ai * 100)}%` };
+  const stage4Part = res * 40;
+  let stage5Part = 0, txt = `研究 ${Math.round(res * 100)}% · AI 占比 ${Math.round(S.aiRatio * 100)}%`;
+  if (isUnlocked(5) && S.agi) {
+    const earned = S.agi.earned || 0;
+    stage5Part = Math.min(1, earned / AGI_RP_TOTAL) * 60;
+    txt = `研究已完成 · AGI 研究 ${fmtNum(earned)} / ${fmtNum(AGI_RP_TOTAL)} RP · +${agiRpPerSec().toFixed(1)}/s`;
+  }
+  const pct = Math.round(stage4Part + stage5Part);
+  return { pct, txt };
 }
 function agiBarHTML() {
   const a = agiProgress();
   return `<div class="agi-bar-wrap">
-    <div class="lb"><span>🧠 AGI 总进度</span><b>${a.pct}%</b></div>
-    <div class="agi-bar"><i style="width:${a.pct}%"></i></div>
-    <div class="research-meta" style="margin-top:6px"><span>${a.txt}</span>${S.flags.agi ? '<span style="color:#0d9488;font-weight:800">✅ AGI 已达成！</span>' : ''}</div>
+    <div class="lb"><span>🧠 AGI 总进度</span><b id="agi-dash-pct">${a.pct}%</b></div>
+    <div class="agi-bar"><i id="agi-dash-bar" style="width:${a.pct}%"></i></div>
+    <div class="research-meta" style="margin-top:6px"><span id="agi-dash-txt">${a.txt}</span>${S.flags.agi ? '<span style="color:#0d9488;font-weight:800">✅ AGI 已达成！</span>' : ''}</div>
   </div>`;
 }
 

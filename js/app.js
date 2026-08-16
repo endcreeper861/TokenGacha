@@ -22,10 +22,19 @@ $('btn-copy-key').onclick = () => { SFX.click(); toast('🔑 令牌已复制（�
 $('btn-share').onclick = () => { SFX.click(); openShare(null); };
 $('btn-topup').onclick = () => { SFX.click(); showModal(topupHTML()); const inp = $('topup-amt'); if (inp) { inp.addEventListener('keydown', e => { if (e.key === 'Enter') doTopup(); }); inp.focus && inp.focus(); } };
 document.addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT') return;
-  if (e.code === 'Space') {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  const modalOpen = $('modal-mask').classList.contains('show');
+  const overlayOpen = $('overlay').classList.contains('show');
+  const workPageActive = $('page-work').classList.contains('active');
+  if (modalOpen || overlayOpen || !workPageActive) return;
+  const k = e.key;
+  const isLetter = /^[a-zA-Z]$/.test(k) && !e.ctrlKey && !e.metaKey && !e.altKey;
+  if (isLetter) {
     e.preventDefault();
-    if (!$('modal-mask').classList.contains('show') && !$('overlay').classList.contains('show') && $('page-work').classList.contains('active')) doWork();
+    clickerClick();
+  } else if (e.code === 'Space' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    e.preventDefault();
+    clickerClick();
   }
 });
 document.addEventListener('click', e => {
