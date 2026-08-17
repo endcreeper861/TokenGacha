@@ -411,6 +411,11 @@ function updateAgiDynamic() {
   const bar = $('agi-bar'); if (bar) bar.style.width = pct + '%';
   const earned = $('agi-earned'); if (earned) earned.textContent = `${fmtNum(a.earned)} / ${fmtNum(total)} RP`;
   const rateEl = $('agi-rate'); if (rateEl) rateEl.textContent = `⚡ +${rate.toFixed(1)}/s`;
+  // 研发日志中的 AGI 数字也每秒刷新
+  const rlogWages = $('rlog-wages'); if (rlogWages) rlogWages.textContent = fmt(S.stats.wages);
+  const rlogEarned = $('rlog-earned'); if (rlogEarned) rlogEarned.textContent = fmtNum(a.earned);
+  const rlogRate = $('rlog-rate'); if (rlogRate) rlogRate.textContent = rate.toFixed(1) + ' RP/s';
+  const rlogFinal = $('rlog-final'); if (rlogFinal) rlogFinal.textContent = `${fmtNum(a.final)} / ${fmtNum(AGI_FINAL_RP)}`;
   // 仪表盘 AGI 总进度也轻量刷新
   const dashPct = $('agi-dash-pct');
   if (dashPct) {
@@ -529,12 +534,12 @@ function renderResearchLog() {
   // 会话内日志（工资与灵感），从 stats 派生
   const rows = [];
   if (S.stats.breakthroughs > 0) rows.push(`<div class="rlog-row">💡 灵感迸发 ×${S.stats.breakthroughs}（每次 +10%）</div>`);
-  rows.push(`<div class="rlog-row">💸 累计工资支出 ${fmt(S.stats.wages)}</div>`);
+  rows.push(`<div class="rlog-row">💸 累计工资支出 <span id="rlog-wages">${fmt(S.stats.wages)}</span></div>`);
   if (S.research.done) rows.push('<div class="rlog-row">🧠 AGI-X 研发完成！</div>');
   if (isUnlocked(5) && S.agi) {
-    rows.push(`<div class="rlog-row">🧠 AGI 研究点累计 ${fmtNum(S.agi.earned)}</div>`);
-    rows.push(`<div class="rlog-row">⚡ 当前 AGI 速率 ${agiRpPerSec().toFixed(1)} RP/s</div>`);
-    if (S.agi.final > 0) rows.push(`<div class="rlog-row">👾 最终协议进度 ${fmtNum(S.agi.final)} / ${fmtNum(AGI_FINAL_RP)}</div>`);
+    rows.push(`<div class="rlog-row">🧠 AGI 研究点累计 <span id="rlog-earned">${fmtNum(S.agi.earned)}</span></div>`);
+    rows.push(`<div class="rlog-row">⚡ 当前 AGI 速率 <span id="rlog-rate">${agiRpPerSec().toFixed(1)} RP/s</span></div>`);
+    rows.push(`<div class="rlog-row">👾 最终协议进度 <span id="rlog-final">${fmtNum(S.agi.final)} / ${fmtNum(AGI_FINAL_RP)}</span></div>`);
   }
   log.innerHTML = rows.length ? rows.join('') : '<div class="rlog-empty">雇佣研究员开始研究…</div>';
 }
