@@ -53,8 +53,9 @@ const API_PRICE = { N: 40, R: 90, SR: 200, SSR: 450, UR: 1000, EX: 1500 }; // EX
 // 自产 token 卖出系数（官方价 ×0.6）
 const SELL_FACTOR = 0.6;
 // Token 自动订阅：目标库存档位（tokens）
-const AUTOBUY_TARGETS = [500000, 1000000, 2000000, 5000000, 10000000];
-const AUTOBUY_DEFAULT = { enabled: false, rarity: 'N', target: 1000000, lastBuyAt: 0 };
+// 默认 4M ≈ 5 个大单（每单 800K），实际触发下限会按当前大单消耗动态计算
+const AUTOBUY_TARGETS = [500000, 1000000, 2000000, 4000000, 5000000, 10000000];
+const AUTOBUY_DEFAULT = { enabled: false, rarity: 'N', target: 4000000, lastBuyAt: 0 };
 // 三档工作定义（Phase 3.3）
 const WORK_TIERS = {
   small:  { key: 'small',  name: '🟢 小单', tokens: 50000,  payMult: 0.25, penalty: 16 },

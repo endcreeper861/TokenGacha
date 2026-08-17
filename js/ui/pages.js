@@ -215,6 +215,17 @@ function qColor(q) {
   return '#fee2e2;color:#b91c1c';
 }
 
+// 每秒轻量刷新资产页动态数字（不重建整棵 DOM）
+function updateBalanceDynamic() {
+  if (!isUnlocked(2)) return;
+  const bMoney = $('b-money'); if (bMoney) bMoney.textContent = fmt(S.money);
+  const bEarn = $('b-earn'); if (bEarn) bEarn.textContent = fmt(S.stats.earn);
+  const bSpent = $('b-spent'); if (bSpent) bSpent.textContent = fmt(S.stats.spent);
+  const bTok = $('b-tokval'); if (bTok) bTok.textContent = fmt(estValue());
+  const bFreeBar = $('b-free-bar'); if (bFreeBar) bFreeBar.style.width = Math.min(100, S.money / VICTORY_AT * 100) + '%';
+  const bFreeTxt = $('b-free-txt'); if (bFreeTxt) bFreeTxt.textContent = `${fmt(S.money)} / ${fmt(VICTORY_AT)}`;
+}
+
 /* ---------- 渲染: 头部 ---------- */
 let shownMoney = S.money;
 function renderHeader() {

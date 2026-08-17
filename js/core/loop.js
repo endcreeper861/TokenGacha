@@ -16,10 +16,11 @@ function tick() {
 }
 setInterval(tick, 1000);
 
-// 局部刷新: 仅更新头部资源数字 + 阶段五 AGI 研究面板（廉价路径）
+// 局部刷新: 仅更新头部资源数字 + 资产页余额 + 阶段五 AGI 研究面板（廉价路径）
 function renderDynamic() {
   renderHeader();
   tweenMoney();
+  if (typeof updateBalanceDynamic === 'function') updateBalanceDynamic();
   if (typeof updateAgiDynamic === 'function') updateAgiDynamic();
   if (typeof updateMarketAffordability === 'function') updateMarketAffordability();
   if (typeof updateAutoBuyStatus === 'function') updateAutoBuyStatus();

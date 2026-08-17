@@ -9,17 +9,42 @@ function autoBuyEnabled() {
   return !!(S.upgrades && S.upgrades.s2_subscribe && S.autobuy && S.autobuy.enabled);
 }
 
-/* ---------- 核心：每秒至多补一包 ---------- */
+/* ---------- 自动订阅速度：每秒补足 5 个大单 ---------- */
+const AUTOBUY_ORDERS_PER_SEC = 5;
+// 当前每个大单实际消耗（受 LRU 缓存等升级影响）
+function autoBuyLargeCost() {
+  return typeof tierTaskCost === 'function' ? tierTaskCost(WORK_TIERS.large) : WORK_TIERS.large.tokens;
+}
+// 每秒 5 个大单所需 token
+function autoBuyNeedPerSec() {
+  return AUTOBUY_ORDERS_PER_SEC * autoBuyLargeCost();
+}
+// 官方 API 每包 1M，计算每秒需要补几包
+function autoBuyPacksPerSec() {
+  return Math.max(1, Math.ceil(autoBuyNeedPerSec() / API_UNIT));
+}
+// 触发补货的最低库存：至少保证 5 个大单，同时尊重玩家设置的更高目标
+function autoBuyTriggerThreshold() {
+  return Math.max(autoBuyNeedPerSec(), (S.autobuy && S.autobuy.target) || AUTOBUY_DEFAULT.target);
+}
+
+/* ---------- 核心：每秒补足 5 大单（至多按需包数） ---------- */
 function autoBuyOnce() {
   if (!autoBuyEnabled()) return false;
   if (S.stage < 2) return false;
-  const target = S.autobuy.target || AUTOBUY_DEFAULT.target;
-  if (totalTokens() >= target) return false;
+  if (totalTokens() >= autoBuyTriggerThreshold()) return false;
   const price = API_PRICE[S.autobuy.rarity];
-  if (price == null || S.money < price) return false;
-  const ok = buyApi(S.autobuy.rarity, { auto: true });
-  if (ok && typeof updateAutoBuyStatus === 'function') updateAutoBuyStatus();
-  return ok;
+  if (price == null) return false;
+  const packs = autoBuyPacksPerSec();
+  let bought = 0;
+  for (let i = 0; i < packs; i++) {
+    if (S.money < price) break;
+    const ok = buyApi(S.autobuy.rarity, { auto: true });
+    if (!ok) break;
+    bought++;
+  }
+  if (bought && typeof updateAutoBuyStatus === 'function') updateAutoBuyStatus();
+  return bought > 0;
 }
 onTick(() => { autoBuyOnce(); });
 
@@ -48,7 +73,7 @@ function setAutoBuyTarget(t) {
   S.autobuy.target = n;
   save(); renderAll();
   SFX.click();
-  toast(`📦 自动订阅目标库存设为 ${fmtK(n)} tokens`);
+  toast(`📦 自动订阅目标库存设为 ${fmtK(n)} tokens（至少保持 5 大单）`);
 }
 
 /* ---------- 渲染 ---------- */
@@ -84,7 +109,7 @@ function renderAutoBuy() {
   el.innerHTML = `
     <div class="panel-title">📦 Token 自动订阅<span class="right"><span class="autobuy-state ${on ? 'on' : ''}">${on ? '▶ 运行中' : '⏸ 已暂停'}</span></span></div>
     <div class="autobuy-controls">
-      <button id="btn-autobuy" class="work-btn auto autobuy-toggle ${on ? 'on' : ''}">${on ? '⏸ 暂停自动订阅' : '▶ 开启自动订阅'}<small>${on ? '库存低于目标自动购买' : '官方 API 自动补货'}</small></button>
+      <button id="btn-autobuy" class="work-btn auto autobuy-toggle ${on ? 'on' : ''}">${on ? '⏸ 暂停自动订阅' : '▶ 开启自动订阅'}<small>${on ? '库存不足 5 大单时自动购买' : '官方 API 自动补货'}</small></button>
       <div class="autobuy-row">
         <span class="autobuy-label">购买包</span>
         <div class="autobuy-pills">${RORDER.map(r => `<button class="tier-btn autobuy-pill ${r === rarity ? 'active' : ''}" data-abrar="${r}">${RARITY[r].name}<small>¥${API_PRICE[r]}/1M</small></button>`).join('')}</div>
@@ -112,18 +137,22 @@ function updateAutoBuyStatus() {
   const note = $('autobuy-note');
   if (note) {
     const price = API_PRICE[S.autobuy.rarity];
-    const need = Math.max(0, (S.autobuy.target || AUTOBUY_DEFAULT.target) - totalTokens());
-    let txt = `当前库存 ${fmtK(totalTokens())} / 目标 ${fmtK(S.autobuy.target || AUTOBUY_DEFAULT.target)}`;
+    const needPerSec = autoBuyNeedPerSec();
+    const packs = autoBuyPacksPerSec();
+    const threshold = autoBuyTriggerThreshold();
+    const need = Math.max(0, threshold - totalTokens());
+    let txt = `当前库存 ${fmtK(totalTokens())} / 5 大单需 ${fmtK(needPerSec)}`;
+    if (S.autobuy.target > needPerSec) txt += `（目标 ${fmtK(S.autobuy.target)}）`;
     if (!on) txt += ' · 已暂停';
     else if (need <= 0) txt += ' · 库存充足';
     else if (S.money < price) txt += ` · 余额不足（还差 ¥${fmt(Math.max(0, price - S.money))}）`;
-    else txt += ` · 下次补货 ${RARITY[S.autobuy.rarity].name} 包 ¥${price}`;
+    else txt += ` · 每次补货 ${packs} 包（5 大单 · 每单 ${fmtK(autoBuyLargeCost())}）`;
     note.innerHTML = txt;
   }
   const btn = $('btn-autobuy');
   if (btn) {
     btn.classList.toggle('on', on);
-    btn.innerHTML = `${on ? '⏸ 暂停自动订阅' : '▶ 开启自动订阅'}<small>${on ? '库存低于目标自动购买' : '官方 API 自动补货'}</small>`;
+    btn.innerHTML = `${on ? '⏸ 暂停自动订阅' : '▶ 开启自动订阅'}<small>${on ? '库存不足 5 大单时自动购买' : '官方 API 自动补货'}</small>`;
   }
   const count = $('autobuy-count'); if (count) count.textContent = S.stats.autoBuys || 0;
   const spent = $('autobuy-spent'); if (spent) spent.textContent = fmt(S.stats.autoBuySpent || 0);

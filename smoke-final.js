@@ -113,9 +113,9 @@ function check(name, ok, extra = '') {
   await new Promise(r => setTimeout(r, 2200));
   const autoBought = await page.evaluate(() => {
     const c = S.inv.find(x => x.src === 'official' && MMAP[x.m].r === 'R');
-    return !!(c && c.tokens >= 1000000 && S.stats.autoBuys >= 1);
+    return !!(c && c.tokens >= 4000000 && S.stats.autoBuys >= 4);
   });
-  check('自动补货成功', autoBought, 'autoBuys=' + (await page.evaluate(() => S.stats.autoBuys)));
+  check('自动补货成功（每秒 5 大单）', autoBought, 'autoBuys=' + (await page.evaluate(() => S.stats.autoBuys)));
   const autoBeforeStop = await page.evaluate(() => S.stats.autoBuys);
   await page.evaluate(() => { S.inv = []; S.autobuy.enabled = false; });
   await new Promise(r => setTimeout(r, 1200));

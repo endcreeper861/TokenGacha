@@ -10,7 +10,7 @@
 - 🎰 三个卡池、单抽/十连、保底机制，翻卡动画 + 粒子特效
 - 📊 35 个真实模型，稀有度按 [Artificial Analysis 智能指数](https://artificialanalysis.ai/leaderboards/models) 分档（图标来自 [@lobehub/icons](https://lobehub.com/icons)）
 - 💼 三档工作（小/中/大单）+ 品质系统（盲盒 60%~100% / 官方 95% / 自产 100%）+ 177 条爆笑终端文本
-- 📦 Token 自动订阅：自动化调度后解锁，库存低于目标自动购买官方 API token（可选手包/目标库存）
+- 📦 Token 自动订阅：自动化调度后解锁，自动按每秒 5 个大单补货（每单消耗随 LRU 等升级动态变化）
 - 🖥️ 六档显卡机房（RTX 4060 → B200），自动产出纯净 token，限时市场事件
 - 🔬 三档研究员 + 边际递减 + 灵感迸发，研发出超级模型 AGI-X
 - 🧠 九项技术树 + AGI 研究点（RP）+ 最终协议 → AGI 通关 + 沙盒模式
